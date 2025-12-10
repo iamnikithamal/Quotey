@@ -1,5 +1,6 @@
 package com.quotey.create
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,6 +30,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
+
+        // Set up global exception handler
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            handleUncaughtException(thread, throwable)
+        }
 
         super.onCreate(savedInstanceState)
 
@@ -80,5 +86,20 @@ fun QuoteyApp(
                 startDestination = startDestination
             )
         }
+    }
+
+    private fun handleUncaughtException(thread: Thread, throwable: Throwable) {
+        val errorMessage = throwable.message ?: throwable.javaClass.simpleName
+        val stackTrace = throwable.stackTraceToString()
+        val cause = throwable.cause?.toString() ?: ""
+
+        val intent = Intent(this, DebugActivity::class.java).apply {
+            putExtra(DebugActivity.EXTRA_ERROR_MESSAGE, errorMessage)
+            putExtra(DebugActivity.EXTRA_ERROR_STACKTRACE, stackTrace)
+            putExtra(DebugActivity.EXTRA_ERROR_CAUSE, cause)
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(intent)
+        finish()
     }
 }
