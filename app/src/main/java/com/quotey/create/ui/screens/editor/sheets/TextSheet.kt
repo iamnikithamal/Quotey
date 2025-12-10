@@ -122,7 +122,7 @@ fun TextSheet(
             SectionTitle("Font Size")
             SliderWithValue(
                 value = style.fontSize,
-                onValueChange = { onUpdateStyle { it.copy(fontSize = it2) } },
+                onValueChange = { newSize -> onUpdateStyle { it.copy(fontSize = newSize) } },
                 valueRange = 12f..120f,
                 valueLabel = "${style.fontSize.toInt()} sp",
                 modifier = Modifier.padding(horizontal = 16.dp)
