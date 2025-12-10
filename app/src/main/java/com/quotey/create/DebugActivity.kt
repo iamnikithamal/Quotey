@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontMonospace
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -189,7 +188,7 @@ private fun DebugErrorScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 11.sp,
-                            fontFamily = FontMonospace
+                            fontFamily = FontFamily.Monospace
                         ),
                         modifier = Modifier.padding(12.dp),
                         maxLines = 5
@@ -219,7 +218,7 @@ private fun DebugErrorScreen(
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 11.sp,
-                                fontFamily = FontMonospace
+                                fontFamily = FontFamily.Monospace
                             ),
                             modifier = Modifier.padding(12.dp),
                             maxLines = 3
@@ -247,7 +246,7 @@ private fun DebugErrorScreen(
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 10.sp,
-                            fontFamily = FontMonospace
+                            fontFamily = FontFamily.Monospace
                         ),
                         modifier = Modifier.padding(12.dp),
                         maxLines = 10
