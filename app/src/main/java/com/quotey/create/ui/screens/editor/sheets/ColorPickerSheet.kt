@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -34,12 +35,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -87,11 +91,74 @@ fun ColorPickerSheet(
                 .fillMaxWidth()
                 .padding(bottom = 24.dp)
         ) {
-            SheetHeader(title = "Choose Color", onDismiss = onDismiss)
+            SheetHeader(title = "Custom Color", onDismiss = onDismiss)
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Color preview
+            // Saturation-Value picker
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .padding(horizontal = 16.dp)
+                    .clip(RoundedCornerShape(16.dp))
+            ) {
+                SaturationValuePicker(
+                    hue = hue,
+                    saturation = saturation,
+                    value = value,
+                    onSaturationValueChanged = { s, v ->
+                        saturation = s
+                        value = v
+                        updateHexInput(hue, s, v) { hexInput = it }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Hue slider
+            SectionTitle("Hue")
+            HueSlider(
+                hue = hue,
+                onHueChanged = {
+                    hue = it
+                    updateHexInput(it, saturation, value) { hex -> hexInput = hex }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Alpha slider
+            SectionTitle("Opacity")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AlphaSlider(
+                    alpha = alpha,
+                    color = currentColor.copy(alpha = 1f),
+                    onAlphaChanged = { alpha = it },
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Text(
+                    text = "${(alpha * 100).roundToInt()}%",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(48.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Preview and hex input row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,18 +166,28 @@ fun ColorPickerSheet(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Current color preview
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(currentColor)
-                        .border(
-                            width = 2.dp,
-                            color = MaterialTheme.colorScheme.outline,
-                            shape = RoundedCornerShape(12.dp)
+                // Color preview
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Preview",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .shadow(4.dp, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(checkerboardBrush())
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(currentColor)
                         )
-                )
+                    }
+                }
 
                 // Hex input
                 OutlinedTextField(
@@ -134,7 +211,7 @@ fun ColorPickerSheet(
                             }
                         }
                     },
-                    label = { Text("Hex") },
+                    label = { Text("Hex Color") },
                     prefix = { Text("#") },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -142,61 +219,34 @@ fun ColorPickerSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Saturation-Value picker
-            SectionTitle("Color")
-            SaturationValuePicker(
-                hue = hue,
-                saturation = saturation,
-                value = value,
-                onSaturationValueChanged = { s, v ->
-                    saturation = s
-                    value = v
-                    updateHexInput(hue, s, v) { hexInput = it }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Hue slider
-            SectionTitle("Hue")
-            HueSlider(
-                hue = hue,
-                onHueChanged = {
-                    hue = it
-                    updateHexInput(it, saturation, value) { hex -> hexInput = hex }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Alpha slider
-            SectionTitle("Opacity")
-            Slider(
-                value = alpha,
-                onValueChange = { alpha = it },
+            // RGB values display
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                colors = SliderDefaults.colors(
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                RgbValueChip(
+                    "R",
+                    (currentColor.red * 255).roundToInt(),
+                    Color.Red.copy(alpha = 0.15f),
+                    Modifier.weight(1f)
                 )
-            )
-            Text(
-                text = "${(alpha * 100).roundToInt()}%",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
+                RgbValueChip(
+                    "G",
+                    (currentColor.green * 255).roundToInt(),
+                    Color.Green.copy(alpha = 0.15f),
+                    Modifier.weight(1f)
+                )
+                RgbValueChip(
+                    "B",
+                    (currentColor.blue * 255).roundToInt(),
+                    Color.Blue.copy(alpha = 0.15f),
+                    Modifier.weight(1f)
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -204,14 +254,18 @@ fun ColorPickerSheet(
             Button(
                 onClick = {
                     onColorSelected(currentColor.value.toLong())
+                    onDismiss()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .height(48.dp),
-                shape = RoundedCornerShape(12.dp)
+                    .height(56.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Apply Color")
+                Text(
+                    text = "Apply Color",
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
     }
@@ -229,6 +283,7 @@ private fun SaturationValuePicker(
 
     Box(
         modifier = modifier
+            .aspectRatio(1f)
             .clip(RoundedCornerShape(12.dp))
             .onSizeChanged { size = it }
             .pointerInput(Unit) {
@@ -262,20 +317,32 @@ private fun SaturationValuePicker(
                 )
             )
 
-            // Draw selector circle
-            val selectorX = saturation * size.width
-            val selectorY = (1f - value) * size.height
+            // Draw picker indicator
+            val indicatorX = saturation * size.width
+            val indicatorY = (1f - value) * size.height
+            val indicatorRadius = 12.dp.toPx()
+
+            // Outer ring (white)
             drawCircle(
                 color = Color.White,
-                radius = 12.dp.toPx(),
-                center = Offset(selectorX, selectorY),
+                radius = indicatorRadius,
+                center = Offset(indicatorX, indicatorY),
                 style = Stroke(width = 3.dp.toPx())
             )
+
+            // Inner ring (black for contrast)
             drawCircle(
                 color = Color.Black.copy(alpha = 0.3f),
-                radius = 12.dp.toPx(),
-                center = Offset(selectorX, selectorY),
+                radius = indicatorRadius - 2.dp.toPx(),
+                center = Offset(indicatorX, indicatorY),
                 style = Stroke(width = 1.dp.toPx())
+            )
+
+            // Filled center with current color
+            drawCircle(
+                color = Color.hsv(hue, saturation, value),
+                radius = indicatorRadius - 4.dp.toPx(),
+                center = Offset(indicatorX, indicatorY)
             )
         }
     }
@@ -291,8 +358,8 @@ private fun HueSlider(
 
     Box(
         modifier = modifier
-            .height(40.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .height(32.dp)
+            .clip(RoundedCornerShape(16.dp))
             .onSizeChanged { size = it }
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
@@ -315,21 +382,124 @@ private fun HueSlider(
                 brush = Brush.horizontalGradient(hueColors)
             )
 
-            // Draw selector
-            val selectorX = (hue / 360f) * size.width
-            drawCircle(
+            // Draw indicator
+            val indicatorX = (hue / 360f) * size.width
+            val indicatorWidth = 8.dp.toPx()
+
+            drawRoundRect(
                 color = Color.White,
-                radius = 16.dp.toPx(),
-                center = Offset(selectorX, size.height / 2f),
+                topLeft = Offset(indicatorX - indicatorWidth / 2, 0f),
+                size = Size(indicatorWidth, size.height.toFloat()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
                 style = Stroke(width = 3.dp.toPx())
             )
-            drawCircle(
-                color = Color.hsv(hue, 1f, 1f),
-                radius = 12.dp.toPx(),
-                center = Offset(selectorX, size.height / 2f)
+
+            drawRoundRect(
+                color = Color.Black.copy(alpha = 0.2f),
+                topLeft = Offset(indicatorX - indicatorWidth / 2 + 1.5f.dp.toPx(), 1.5f.dp.toPx()),
+                size = Size(indicatorWidth - 3.dp.toPx(), size.height.toFloat() - 3.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.5f.dp.toPx()),
+                style = Stroke(width = 1.dp.toPx())
             )
         }
     }
+}
+
+@Composable
+private fun AlphaSlider(
+    alpha: Float,
+    color: Color,
+    onAlphaChanged: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var size by remember { mutableStateOf(IntSize.Zero) }
+
+    Box(
+        modifier = modifier
+            .height(32.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(checkerboardBrush())
+            .onSizeChanged { size = it }
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    onAlphaChanged((offset.x / size.width).coerceIn(0f, 1f))
+                }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures { change, _ ->
+                    change.consume()
+                    onAlphaChanged((change.position.x / size.width).coerceIn(0f, 1f))
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.matchParentSize()) {
+            // Draw alpha gradient
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(color.copy(alpha = 0f), color)
+                )
+            )
+
+            // Draw indicator
+            val indicatorX = alpha * size.width
+            val indicatorWidth = 8.dp.toPx()
+
+            drawRoundRect(
+                color = Color.White,
+                topLeft = Offset(indicatorX - indicatorWidth / 2, 0f),
+                size = Size(indicatorWidth, size.height.toFloat()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+                style = Stroke(width = 3.dp.toPx())
+            )
+
+            drawRoundRect(
+                color = Color.Black.copy(alpha = 0.2f),
+                topLeft = Offset(indicatorX - indicatorWidth / 2 + 1.5f.dp.toPx(), 1.5f.dp.toPx()),
+                size = Size(indicatorWidth - 3.dp.toPx(), size.height.toFloat() - 3.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.5f.dp.toPx()),
+                style = Stroke(width = 1.dp.toPx())
+            )
+        }
+    }
+}
+
+@Composable
+private fun RgbValueChip(
+    label: String,
+    value: Int,
+    backgroundColor: Color,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = value.toString(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun checkerboardBrush(): Brush {
+    return Brush.linearGradient(
+        colors = listOf(Color.LightGray.copy(alpha = 0.3f), Color.White.copy(alpha = 0.3f))
+    )
 }
 
 private fun rgbToHsv(r: Float, g: Float, b: Float): FloatArray {

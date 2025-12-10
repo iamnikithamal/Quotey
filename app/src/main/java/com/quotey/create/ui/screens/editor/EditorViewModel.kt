@@ -25,6 +25,7 @@ sealed class EditorEvent {
     data class ExportSuccess(val uri: Uri) : EditorEvent()
     data class ExportError(val message: String) : EditorEvent()
     data object ShareImage : EditorEvent()
+    data object RequestImagePicker : EditorEvent()
 }
 
 enum class EditorBottomSheet {
@@ -37,16 +38,25 @@ enum class EditorBottomSheet {
     GRADIENT_EDITOR,
     PATTERN_SELECTOR,
     FONT_SELECTOR,
-    ASPECT_RATIO
+    ASPECT_RATIO,
+    SHAPE,
+    IMAGE,
+    LAYERS
 }
 
 data class EditorUiState(
     val project: QuoteyProject = QuoteyProject(),
     val selectedTextElementId: String? = null,
+    val selectedShapeElementId: String? = null,
+    val selectedImageElementId: String? = null,
     val activeBottomSheet: EditorBottomSheet = EditorBottomSheet.NONE,
     val isExporting: Boolean = false,
     val colorPickerTarget: ColorPickerTarget = ColorPickerTarget.NONE,
-    val history: ProjectHistory = ProjectHistory()
+    val gradientColorIndex: Int = 0,
+    val history: ProjectHistory = ProjectHistory(),
+    val showGrid: Boolean = false,
+    val snapToGrid: Boolean = false,
+    val gridSize: Int = 20
 )
 
 enum class ColorPickerTarget {
@@ -56,8 +66,14 @@ enum class ColorPickerTarget {
     GRADIENT_COLOR,
     PATTERN_PRIMARY,
     PATTERN_SECONDARY,
+    PATTERN_BACKGROUND,
     TEXT_SHADOW,
-    TEXT_BACKGROUND
+    TEXT_BACKGROUND,
+    TEXT_OUTLINE,
+    TEXT_GLOW,
+    SHAPE_FILL,
+    SHAPE_STROKE,
+    IMAGE_BORDER
 }
 
 @HiltViewModel
@@ -84,6 +100,12 @@ class EditorViewModel @Inject constructor(
 
     val selectedTextElement: TextElement?
         get() = currentPage.textElements.find { it.id == _uiState.value.selectedTextElementId }
+
+    val selectedShapeElement: ShapeElement?
+        get() = currentPage.shapeElements.find { it.id == _uiState.value.selectedShapeElementId }
+
+    val selectedImageElement: ImageElement?
+        get() = currentPage.imageElements.find { it.id == _uiState.value.selectedImageElementId }
 
     init {
         initializeProject()
@@ -157,8 +179,14 @@ class EditorViewModel @Inject constructor(
         _uiState.update { it.copy(activeBottomSheet = EditorBottomSheet.NONE, colorPickerTarget = ColorPickerTarget.NONE) }
     }
 
-    fun showColorPicker(target: ColorPickerTarget) {
-        _uiState.update { it.copy(colorPickerTarget = target, activeBottomSheet = EditorBottomSheet.COLOR_PICKER) }
+    fun showColorPicker(target: ColorPickerTarget, gradientIndex: Int = 0) {
+        _uiState.update {
+            it.copy(
+                colorPickerTarget = target,
+                gradientColorIndex = gradientIndex,
+                activeBottomSheet = EditorBottomSheet.COLOR_PICKER
+            )
+        }
     }
 
     // Page management
@@ -166,7 +194,9 @@ class EditorViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 project = state.project.copy(currentPageIndex = index.coerceIn(0, state.project.pages.lastIndex)),
-                selectedTextElementId = null
+                selectedTextElementId = null,
+                selectedShapeElementId = null,
+                selectedImageElementId = null
             )
         }
     }
@@ -203,13 +233,26 @@ class EditorViewModel @Inject constructor(
         saveToHistory("Reorder pages")
     }
 
+    // Element selection
+    fun clearSelection() {
+        _uiState.update { state ->
+            state.copy(
+                selectedTextElementId = null,
+                selectedShapeElementId = null,
+                selectedImageElementId = null
+            )
+        }
+    }
+
     // Text element management
     fun selectTextElement(elementId: String?) {
         _uiState.update { state ->
             val updatedProject = projectRepository.selectTextElement(state.project, elementId)
             state.copy(
                 project = updatedProject,
-                selectedTextElementId = elementId
+                selectedTextElementId = elementId,
+                selectedShapeElementId = null,
+                selectedImageElementId = null
             )
         }
     }
@@ -220,7 +263,9 @@ class EditorViewModel @Inject constructor(
             val updatedProject = projectRepository.addTextElement(state.project, newElement)
             state.copy(
                 project = updatedProject,
-                selectedTextElementId = newElement.id
+                selectedTextElementId = newElement.id,
+                selectedShapeElementId = null,
+                selectedImageElementId = null
             )
         }
         saveToHistory("Add text element")
@@ -245,13 +290,27 @@ class EditorViewModel @Inject constructor(
         saveToHistory("Update text style")
     }
 
-    fun updateTextPosition(elementId: String, update: (ElementPosition) -> ElementPosition) {
+    fun updateTextPosition(elementId: String, position: ElementPosition) {
         _uiState.update { state ->
             val updatedProject = projectRepository.updateTextElement(state.project, elementId) { element ->
-                element.copy(position = update(element.position))
+                element.copy(position = position)
             }
             state.copy(project = updatedProject)
         }
+    }
+
+    fun updateTextPositionDrag(elementId: String, position: ElementPosition) {
+        // Update without saving to history (for smooth dragging)
+        _uiState.update { state ->
+            val updatedProject = projectRepository.updateTextElement(state.project, elementId) { element ->
+                element.copy(position = position)
+            }
+            state.copy(project = updatedProject)
+        }
+    }
+
+    fun finalizeTextPosition(elementId: String) {
+        saveToHistory("Move text element")
     }
 
     fun removeTextElement(elementId: String) {
@@ -263,6 +322,213 @@ class EditorViewModel @Inject constructor(
             )
         }
         saveToHistory("Remove text element")
+    }
+
+    // Shape element management
+    fun selectShapeElement(elementId: String?) {
+        _uiState.update { state ->
+            state.copy(
+                selectedTextElementId = null,
+                selectedShapeElementId = elementId,
+                selectedImageElementId = null
+            )
+        }
+    }
+
+    fun addShapeElement(type: ShapeType = ShapeType.RECTANGLE) {
+        val newElement = ShapeElement(type = type)
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                shapeElements = state.project.currentPage.shapeElements + newElement
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(
+                project = updatedProject,
+                selectedTextElementId = null,
+                selectedShapeElementId = newElement.id,
+                selectedImageElementId = null
+            )
+        }
+        saveToHistory("Add shape element")
+    }
+
+    fun updateShapeStyle(elementId: String, update: (ShapeStyle) -> ShapeStyle) {
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                shapeElements = state.project.currentPage.shapeElements.map { element ->
+                    if (element.id == elementId) {
+                        element.copy(style = update(element.style))
+                    } else element
+                }
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+        saveToHistory("Update shape style")
+    }
+
+    fun updateShapePosition(elementId: String, position: ElementPosition) {
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                shapeElements = state.project.currentPage.shapeElements.map { element ->
+                    if (element.id == elementId) {
+                        element.copy(position = position)
+                    } else element
+                }
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+    }
+
+    fun removeShapeElement(elementId: String) {
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                shapeElements = state.project.currentPage.shapeElements.filter { it.id != elementId }
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(
+                project = updatedProject,
+                selectedShapeElementId = if (state.selectedShapeElementId == elementId) null else state.selectedShapeElementId
+            )
+        }
+        saveToHistory("Remove shape element")
+    }
+
+    // Image element management
+    fun selectImageElement(elementId: String?) {
+        _uiState.update { state ->
+            state.copy(
+                selectedTextElementId = null,
+                selectedShapeElementId = null,
+                selectedImageElementId = elementId
+            )
+        }
+    }
+
+    fun requestImagePicker() {
+        viewModelScope.launch {
+            _events.emit(EditorEvent.RequestImagePicker)
+        }
+    }
+
+    fun addImageElement(uri: String) {
+        val newElement = ImageElement(uri = uri)
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                imageElements = state.project.currentPage.imageElements + newElement
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(
+                project = updatedProject,
+                selectedTextElementId = null,
+                selectedShapeElementId = null,
+                selectedImageElementId = newElement.id
+            )
+        }
+        saveToHistory("Add image element")
+    }
+
+    fun updateImageStyle(elementId: String, update: (ImageStyle) -> ImageStyle) {
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                imageElements = state.project.currentPage.imageElements.map { element ->
+                    if (element.id == elementId) {
+                        element.copy(style = update(element.style))
+                    } else element
+                }
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+        saveToHistory("Update image style")
+    }
+
+    fun updateImagePosition(elementId: String, position: ElementPosition) {
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                imageElements = state.project.currentPage.imageElements.map { element ->
+                    if (element.id == elementId) {
+                        element.copy(position = position)
+                    } else element
+                }
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+    }
+
+    fun removeImageElement(elementId: String) {
+        _uiState.update { state ->
+            val updatedPage = state.project.currentPage.copy(
+                imageElements = state.project.currentPage.imageElements.filter { it.id != elementId }
+            )
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(
+                project = updatedProject,
+                selectedImageElementId = if (state.selectedImageElementId == elementId) null else state.selectedImageElementId
+            )
+        }
+        saveToHistory("Remove image element")
+    }
+
+    // Layer management
+    fun bringToFront(elementId: String) {
+        _uiState.update { state ->
+            val currentOrder = state.project.currentPage.elementOrder.toMutableList()
+            currentOrder.remove(elementId)
+            currentOrder.add(elementId)
+
+            val updatedPage = state.project.currentPage.copy(elementOrder = currentOrder)
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+        saveToHistory("Bring to front")
+    }
+
+    fun sendToBack(elementId: String) {
+        _uiState.update { state ->
+            val currentOrder = state.project.currentPage.elementOrder.toMutableList()
+            currentOrder.remove(elementId)
+            currentOrder.add(0, elementId)
+
+            val updatedPage = state.project.currentPage.copy(elementOrder = currentOrder)
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+        saveToHistory("Send to back")
+    }
+
+    fun moveLayerUp(elementId: String) {
+        _uiState.update { state ->
+            val currentOrder = state.project.currentPage.elementOrder.toMutableList()
+            val index = currentOrder.indexOf(elementId)
+            if (index >= 0 && index < currentOrder.lastIndex) {
+                currentOrder.removeAt(index)
+                currentOrder.add(index + 1, elementId)
+            }
+
+            val updatedPage = state.project.currentPage.copy(elementOrder = currentOrder)
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+        saveToHistory("Move layer up")
+    }
+
+    fun moveLayerDown(elementId: String) {
+        _uiState.update { state ->
+            val currentOrder = state.project.currentPage.elementOrder.toMutableList()
+            val index = currentOrder.indexOf(elementId)
+            if (index > 0) {
+                currentOrder.removeAt(index)
+                currentOrder.add(index - 1, elementId)
+            }
+
+            val updatedPage = state.project.currentPage.copy(elementOrder = currentOrder)
+            val updatedProject = projectRepository.updateCurrentPage(state.project) { updatedPage }
+            state.copy(project = updatedProject)
+        }
+        saveToHistory("Move layer down")
     }
 
     // Canvas settings
@@ -330,6 +596,16 @@ class EditorViewModel @Inject constructor(
         updateGradient { it.copy(colors = colors) }
     }
 
+    fun setGradientColor(index: Int, color: Long) {
+        updateGradient { gradient ->
+            val newColors = gradient.colors.toMutableList()
+            if (index < newColors.size) {
+                newColors[index] = color
+            }
+            gradient.copy(colors = newColors)
+        }
+    }
+
     fun setGradientType(type: GradientType) {
         updateGradient { it.copy(type = type) }
     }
@@ -367,13 +643,16 @@ class EditorViewModel @Inject constructor(
                 setSolidColor(color)
             }
             ColorPickerTarget.GRADIENT_COLOR -> {
-                // This would be handled differently with gradient color index
+                setGradientColor(_uiState.value.gradientColorIndex, color)
             }
             ColorPickerTarget.PATTERN_PRIMARY -> {
                 updatePattern { it.copy(primaryColor = color) }
             }
             ColorPickerTarget.PATTERN_SECONDARY -> {
                 updatePattern { it.copy(secondaryColor = color) }
+            }
+            ColorPickerTarget.PATTERN_BACKGROUND -> {
+                updatePattern { it.copy(backgroundColor = color) }
             }
             ColorPickerTarget.TEXT_SHADOW -> {
                 selectedTextElement?.let { element ->
@@ -389,9 +668,47 @@ class EditorViewModel @Inject constructor(
                     updateTextStyle(element.id) { it.copy(backgroundColor = color) }
                 }
             }
+            ColorPickerTarget.TEXT_OUTLINE -> {
+                selectedTextElement?.let { element ->
+                    updateTextStyle(element.id) { it.copy(outlineColor = color, outlineEnabled = true) }
+                }
+            }
+            ColorPickerTarget.TEXT_GLOW -> {
+                selectedTextElement?.let { element ->
+                    updateTextStyle(element.id) { it.copy(glowColor = color, glowEnabled = true) }
+                }
+            }
+            ColorPickerTarget.SHAPE_FILL -> {
+                selectedShapeElement?.let { element ->
+                    updateShapeStyle(element.id) { it.copy(fillColor = color) }
+                }
+            }
+            ColorPickerTarget.SHAPE_STROKE -> {
+                selectedShapeElement?.let { element ->
+                    updateShapeStyle(element.id) { it.copy(strokeColor = color) }
+                }
+            }
+            ColorPickerTarget.IMAGE_BORDER -> {
+                selectedImageElement?.let { element ->
+                    updateImageStyle(element.id) { it.copy(borderColor = color) }
+                }
+            }
             ColorPickerTarget.NONE -> {}
         }
         hideBottomSheet()
+    }
+
+    // Grid and snapping
+    fun toggleGrid() {
+        _uiState.update { it.copy(showGrid = !it.showGrid) }
+    }
+
+    fun toggleSnapToGrid() {
+        _uiState.update { it.copy(snapToGrid = !it.snapToGrid) }
+    }
+
+    fun setGridSize(size: Int) {
+        _uiState.update { it.copy(gridSize = size.coerceIn(5, 100)) }
     }
 
     // Export functionality

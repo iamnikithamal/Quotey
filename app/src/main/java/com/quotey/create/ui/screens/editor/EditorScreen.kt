@@ -1,6 +1,8 @@
 package com.quotey.create.ui.screens.editor
 
 import android.graphics.Bitmap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,6 +19,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,7 +42,9 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FormatColorFill
+import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.TextFields
@@ -79,12 +85,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.quotey.create.data.model.QuoteyPage
+import com.quotey.create.data.model.ShapeType
 import com.quotey.create.ui.components.QuoteyCanvas
 import com.quotey.create.ui.screens.editor.sheets.BackgroundSheet
 import com.quotey.create.ui.screens.editor.sheets.CanvasSheet
 import com.quotey.create.ui.screens.editor.sheets.ColorPickerSheet
 import com.quotey.create.ui.screens.editor.sheets.ExportSheet
 import com.quotey.create.ui.screens.editor.sheets.TextSheet
+import com.quotey.create.ui.screens.editor.sheets.ShapeSheet
+import com.quotey.create.ui.screens.editor.sheets.ImageSheet
+import com.quotey.create.ui.screens.editor.sheets.LayersSheet
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -96,6 +106,13 @@ fun EditorScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let { viewModel.addImageElement(it.toString()) }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.events.collectLatest { event ->
@@ -111,6 +128,9 @@ fun EditorScreen(
                 }
                 is EditorEvent.ShareImage -> {
                     // Handle share
+                }
+                is EditorEvent.RequestImagePicker -> {
+                    imagePickerLauncher.launch("image/*")
                 }
             }
         }
@@ -141,13 +161,19 @@ fun EditorScreen(
             ) {
                 QuoteyCanvas(
                     page = uiState.project.currentPage,
-                    selectedElementId = uiState.selectedTextElementId,
-                    onElementSelected = viewModel::selectTextElement,
-                    onElementPositionChanged = { elementId, position ->
-                        viewModel.updateTextPosition(elementId) { position }
+                    selectedTextElementId = uiState.selectedTextElementId,
+                    selectedShapeElementId = uiState.selectedShapeElementId,
+                    selectedImageElementId = uiState.selectedImageElementId,
+                    onTextElementSelected = viewModel::selectTextElement,
+                    onShapeElementSelected = viewModel::selectShapeElement,
+                    onImageElementSelected = viewModel::selectImageElement,
+                    onTextPositionChanged = { elementId, position ->
+                        viewModel.updateTextPosition(elementId, position)
                     },
+                    onShapePositionChanged = viewModel::updateShapePosition,
+                    onImagePositionChanged = viewModel::updateImagePosition,
                     onTextContentChanged = viewModel::updateTextContent,
-                    onBackgroundTap = { viewModel.selectTextElement(null) }
+                    onBackgroundTap = viewModel::clearSelection
                 )
             }
 
@@ -168,6 +194,9 @@ fun EditorScreen(
                 onTextClick = { viewModel.showBottomSheet(EditorBottomSheet.TEXT) },
                 onBackgroundClick = { viewModel.showBottomSheet(EditorBottomSheet.BACKGROUND) },
                 onCanvasClick = { viewModel.showBottomSheet(EditorBottomSheet.CANVAS) },
+                onShapeClick = { viewModel.showBottomSheet(EditorBottomSheet.SHAPE) },
+                onImageClick = { viewModel.showBottomSheet(EditorBottomSheet.IMAGE) },
+                onLayersClick = { viewModel.showBottomSheet(EditorBottomSheet.LAYERS) },
                 onAddText = viewModel::addTextElement
             )
         }
@@ -241,6 +270,84 @@ fun EditorScreen(
                 )
             }
 
+            EditorBottomSheet.SHAPE -> {
+                ShapeSheet(
+                    shapeElement = viewModel.selectedShapeElement,
+                    onDismiss = viewModel::hideBottomSheet,
+                    onAddShape = { shapeType ->
+                        viewModel.addShapeElement(shapeType)
+                    },
+                    onUpdateStyle = { update ->
+                        viewModel.selectedShapeElement?.let { element ->
+                            viewModel.updateShapeStyle(element.id, update)
+                        }
+                    },
+                    onColorPickerRequest = { target ->
+                        viewModel.showColorPicker(target)
+                    },
+                    onDelete = {
+                        viewModel.selectedShapeElement?.let { element ->
+                            viewModel.removeShapeElement(element.id)
+                        }
+                        viewModel.hideBottomSheet()
+                    }
+                )
+            }
+
+            EditorBottomSheet.IMAGE -> {
+                ImageSheet(
+                    imageElement = viewModel.selectedImageElement,
+                    onDismiss = viewModel::hideBottomSheet,
+                    onAddImage = { viewModel.requestImagePicker() },
+                    onUpdateStyle = { update ->
+                        viewModel.selectedImageElement?.let { element ->
+                            viewModel.updateImageStyle(element.id, update)
+                        }
+                    },
+                    onColorPickerRequest = { target ->
+                        viewModel.showColorPicker(target)
+                    },
+                    onDelete = {
+                        viewModel.selectedImageElement?.let { element ->
+                            viewModel.removeImageElement(element.id)
+                        }
+                        viewModel.hideBottomSheet()
+                    }
+                )
+            }
+
+            EditorBottomSheet.LAYERS -> {
+                LayersSheet(
+                    page = uiState.project.currentPage,
+                    onDismiss = viewModel::hideBottomSheet,
+                    onSelectElement = { element ->
+                        when (element) {
+                            is com.quotey.create.data.model.CanvasElement.Text ->
+                                viewModel.selectTextElement(element.id)
+                            is com.quotey.create.data.model.CanvasElement.Shape ->
+                                viewModel.selectShapeElement(element.id)
+                            is com.quotey.create.data.model.CanvasElement.Image ->
+                                viewModel.selectImageElement(element.id)
+                        }
+                    },
+                    onBringToFront = viewModel::bringToFront,
+                    onSendToBack = viewModel::sendToBack,
+                    onMoveUp = viewModel::moveLayerUp,
+                    onMoveDown = viewModel::moveLayerDown,
+                    onDeleteElement = { elementId ->
+                        val textElement = uiState.project.currentPage.textElements.find { it.id == elementId }
+                        val shapeElement = uiState.project.currentPage.shapeElements.find { it.id == elementId }
+                        val imageElement = uiState.project.currentPage.imageElements.find { it.id == elementId }
+
+                        when {
+                            textElement != null -> viewModel.removeTextElement(elementId)
+                            shapeElement != null -> viewModel.removeShapeElement(elementId)
+                            imageElement != null -> viewModel.removeImageElement(elementId)
+                        }
+                    }
+                )
+            }
+
             else -> {}
         }
 
@@ -256,11 +363,20 @@ private fun getInitialColorForTarget(uiState: EditorUiState, viewModel: EditorVi
     return when (uiState.colorPickerTarget) {
         ColorPickerTarget.TEXT_COLOR -> viewModel.selectedTextElement?.style?.color ?: 0xFF000000
         ColorPickerTarget.BACKGROUND_SOLID -> viewModel.currentBackground.solidColor
-        ColorPickerTarget.GRADIENT_COLOR -> viewModel.currentBackground.gradient.colors.firstOrNull() ?: 0xFFFFFFFF
+        ColorPickerTarget.GRADIENT_COLOR -> {
+            val index = uiState.gradientColorIndex
+            viewModel.currentBackground.gradient.colors.getOrElse(index) { 0xFFFFFFFF }
+        }
         ColorPickerTarget.PATTERN_PRIMARY -> viewModel.currentBackground.pattern.primaryColor
         ColorPickerTarget.PATTERN_SECONDARY -> viewModel.currentBackground.pattern.secondaryColor
+        ColorPickerTarget.PATTERN_BACKGROUND -> viewModel.currentBackground.pattern.backgroundColor
         ColorPickerTarget.TEXT_SHADOW -> viewModel.selectedTextElement?.style?.shadow?.color ?: 0x40000000
         ColorPickerTarget.TEXT_BACKGROUND -> viewModel.selectedTextElement?.style?.backgroundColor ?: 0x00000000
+        ColorPickerTarget.TEXT_OUTLINE -> viewModel.selectedTextElement?.style?.outlineColor ?: 0xFF000000
+        ColorPickerTarget.TEXT_GLOW -> viewModel.selectedTextElement?.style?.glowColor ?: 0xFFFFFFFF
+        ColorPickerTarget.SHAPE_FILL -> viewModel.selectedShapeElement?.style?.fillColor ?: 0xFF8FB996
+        ColorPickerTarget.SHAPE_STROKE -> viewModel.selectedShapeElement?.style?.strokeColor ?: 0xFF000000
+        ColorPickerTarget.IMAGE_BORDER -> viewModel.selectedImageElement?.style?.borderColor ?: 0xFF000000
         ColorPickerTarget.NONE -> 0xFFFFFFFF
     }
 }
@@ -487,6 +603,9 @@ private fun EditorBottomToolbar(
     onTextClick: () -> Unit,
     onBackgroundClick: () -> Unit,
     onCanvasClick: () -> Unit,
+    onShapeClick: () -> Unit,
+    onImageClick: () -> Unit,
+    onLayersClick: () -> Unit,
     onAddText: () -> Unit
 ) {
     Surface(
@@ -494,34 +613,53 @@ private fun EditorBottomToolbar(
         color = MaterialTheme.colorScheme.surface,
         tonalElevation = 4.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ToolbarButton(
-                icon = Icons.Rounded.TextFields,
-                label = "Text",
-                onClick = onTextClick
-            )
-            ToolbarButton(
-                icon = Icons.Rounded.FormatColorFill,
-                label = "Background",
-                onClick = onBackgroundClick
-            )
-            ToolbarButton(
-                icon = Icons.Rounded.AspectRatio,
-                label = "Canvas",
-                onClick = onCanvasClick
-            )
-            ToolbarButton(
-                icon = Icons.Rounded.Add,
-                label = "Add Text",
-                onClick = onAddText,
-                isPrimary = true
-            )
+        Column {
+            // Primary toolbar row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ToolbarButton(
+                    icon = Icons.Rounded.TextFields,
+                    label = "Text",
+                    onClick = onTextClick
+                )
+                ToolbarButton(
+                    icon = Icons.Rounded.Category,
+                    label = "Shapes",
+                    onClick = onShapeClick
+                )
+                ToolbarButton(
+                    icon = Icons.Rounded.Image,
+                    label = "Image",
+                    onClick = onImageClick
+                )
+                ToolbarButton(
+                    icon = Icons.Rounded.FormatColorFill,
+                    label = "Background",
+                    onClick = onBackgroundClick
+                )
+                ToolbarButton(
+                    icon = Icons.Rounded.AspectRatio,
+                    label = "Canvas",
+                    onClick = onCanvasClick
+                )
+                ToolbarButton(
+                    icon = Icons.Rounded.Layers,
+                    label = "Layers",
+                    onClick = onLayersClick
+                )
+                ToolbarButton(
+                    icon = Icons.Rounded.Add,
+                    label = "Add Text",
+                    onClick = onAddText,
+                    isPrimary = true
+                )
+            }
         }
     }
 }

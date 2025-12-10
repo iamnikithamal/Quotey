@@ -36,8 +36,54 @@ data class QuoteyPage(
     val canvas: CanvasSettings = CanvasSettings(),
     val background: BackgroundSettings = BackgroundSettings(),
     val textElements: List<TextElement> = listOf(TextElement()),
-    val selectedElementId: String? = null
-)
+    val shapeElements: List<ShapeElement> = emptyList(),
+    val imageElements: List<ImageElement> = emptyList(),
+    val selectedElementId: String? = null,
+    val elementOrder: List<String> = emptyList() // For z-ordering
+) {
+    // Get all elements sorted by layer order
+    val allElements: List<CanvasElement>
+        get() {
+            val allItems = textElements.map { CanvasElement.Text(it) } +
+                    shapeElements.map { CanvasElement.Shape(it) } +
+                    imageElements.map { CanvasElement.Image(it) }
+            return if (elementOrder.isNotEmpty()) {
+                allItems.sortedBy { element ->
+                    val index = elementOrder.indexOf(element.id)
+                    if (index >= 0) index else Int.MAX_VALUE
+                }
+            } else {
+                allItems
+            }
+        }
+}
+
+/**
+ * Sealed class for all canvas elements
+ */
+sealed class CanvasElement {
+    abstract val id: String
+    abstract val position: ElementPosition
+    abstract val isLocked: Boolean
+
+    data class Text(val element: TextElement) : CanvasElement() {
+        override val id: String get() = element.id
+        override val position: ElementPosition get() = element.position
+        override val isLocked: Boolean get() = element.isLocked
+    }
+
+    data class Shape(val element: ShapeElement) : CanvasElement() {
+        override val id: String get() = element.id
+        override val position: ElementPosition get() = element.position
+        override val isLocked: Boolean get() = element.isLocked
+    }
+
+    data class Image(val element: ImageElement) : CanvasElement() {
+        override val id: String get() = element.id
+        override val position: ElementPosition get() = element.position
+        override val isLocked: Boolean get() = element.isLocked
+    }
+}
 
 /**
  * Canvas/output settings
@@ -141,7 +187,8 @@ data class PatternSettings(
     val scale: Float = 1f,
     val density: Float = 0.5f,
     val rotation: Float = 0f,
-    val opacity: Float = 0.3f
+    val opacity: Float = 0.3f,
+    val backgroundColor: Long = 0xFFFFFFFF
 )
 
 enum class PatternType {
@@ -180,8 +227,105 @@ data class TextElement(
     val content: String = "Your text here",
     val style: TextStyle = TextStyle(),
     val position: ElementPosition = ElementPosition(),
-    val isSelected: Boolean = false
+    val isSelected: Boolean = false,
+    val isLocked: Boolean = false
 )
+
+/**
+ * Shape element for geometric shapes
+ */
+data class ShapeElement(
+    val id: String = UUID.randomUUID().toString(),
+    val type: ShapeType = ShapeType.RECTANGLE,
+    val position: ElementPosition = ElementPosition(width = 0.3f),
+    val style: ShapeStyle = ShapeStyle(),
+    val isSelected: Boolean = false,
+    val isLocked: Boolean = false
+)
+
+enum class ShapeType {
+    RECTANGLE,
+    ROUNDED_RECTANGLE,
+    CIRCLE,
+    OVAL,
+    TRIANGLE,
+    STAR,
+    POLYGON,
+    LINE,
+    ARROW,
+    HEART,
+    DIAMOND,
+    HEXAGON,
+    PENTAGON,
+    CROSS,
+    RING,
+    ARC,
+    CUSTOM_PATH
+}
+
+/**
+ * Shape styling options
+ */
+data class ShapeStyle(
+    val fillColor: Long? = 0xFF8FB996,
+    val strokeColor: Long = 0xFF000000,
+    val strokeWidth: Float = 0f,
+    val cornerRadius: Float = 0f,
+    val opacity: Float = 1f,
+    val shadowEnabled: Boolean = false,
+    val shadowColor: Long = 0x40000000,
+    val shadowBlur: Float = 10f,
+    val shadowOffsetX: Float = 0f,
+    val shadowOffsetY: Float = 5f,
+    // For polygon/star
+    val sides: Int = 5,
+    val innerRadius: Float = 0.5f, // For star shape
+    // Gradient fill
+    val useGradientFill: Boolean = false,
+    val gradientSettings: GradientSettings = GradientSettings()
+)
+
+/**
+ * Image element for imported images
+ */
+data class ImageElement(
+    val id: String = UUID.randomUUID().toString(),
+    val uri: String = "",
+    val position: ElementPosition = ElementPosition(width = 0.5f),
+    val style: ImageStyle = ImageStyle(),
+    val isSelected: Boolean = false,
+    val isLocked: Boolean = false
+)
+
+/**
+ * Image styling options
+ */
+data class ImageStyle(
+    val cornerRadius: Float = 0f,
+    val opacity: Float = 1f,
+    val borderWidth: Float = 0f,
+    val borderColor: Long = 0xFF000000,
+    val shadowEnabled: Boolean = false,
+    val shadowColor: Long = 0x40000000,
+    val shadowBlur: Float = 10f,
+    val shadowOffsetX: Float = 0f,
+    val shadowOffsetY: Float = 5f,
+    val scaleType: ImageScaleType = ImageScaleType.FIT,
+    val flipHorizontal: Boolean = false,
+    val flipVertical: Boolean = false,
+    // Filters
+    val brightness: Float = 1f,
+    val contrast: Float = 1f,
+    val saturation: Float = 1f,
+    val blur: Float = 0f
+)
+
+enum class ImageScaleType {
+    FIT,
+    FILL,
+    CROP,
+    NONE
+}
 
 /**
  * Comprehensive text styling
@@ -199,8 +343,26 @@ data class TextStyle(
     val shadow: TextShadowSettings? = null,
     val backgroundColor: Long? = null,
     val backgroundPadding: Float = 8f,
-    val backgroundCornerRadius: Float = 4f
+    val backgroundCornerRadius: Float = 4f,
+    // Advanced effects
+    val outlineEnabled: Boolean = false,
+    val outlineColor: Long = 0xFF000000,
+    val outlineWidth: Float = 2f,
+    val glowEnabled: Boolean = false,
+    val glowColor: Long = 0xFFFFFFFF,
+    val glowRadius: Float = 10f,
+    val useGradientFill: Boolean = false,
+    val gradientColors: List<Long> = listOf(0xFF000000, 0xFF000000),
+    val textTransform: TextTransform = TextTransform.NONE,
+    val opacity: Float = 1f
 )
+
+enum class TextTransform {
+    NONE,
+    UPPERCASE,
+    LOWERCASE,
+    CAPITALIZE
+}
 
 enum class TextFontStyle {
     NORMAL,
@@ -232,15 +394,18 @@ data class TextShadowSettings(
 )
 
 /**
- * Element position and sizing
+ * Element position and sizing with improved control
  */
 data class ElementPosition(
     val x: Float = 0.5f, // 0-1 relative to canvas
     val y: Float = 0.5f,
     val width: Float = 0.9f, // 0-1 relative to canvas
+    val height: Float = 0f, // 0 means auto-calculated based on content
     val rotation: Float = 0f,
     val anchorX: Float = 0.5f, // Anchor point 0-1
-    val anchorY: Float = 0.5f
+    val anchorY: Float = 0.5f,
+    val scaleX: Float = 1f,
+    val scaleY: Float = 1f
 )
 
 /**
@@ -251,7 +416,10 @@ data class ExportSettings(
     val quality: Int = 100, // 0-100, for JPEG
     val scale: Float = 1f, // Multiplier for resolution
     val includeAllPages: Boolean = true,
-    val fileName: String = "quotey_export"
+    val fileName: String = "quotey_export",
+    val transparentBackground: Boolean = false,
+    val watermarkEnabled: Boolean = false,
+    val watermarkText: String = ""
 )
 
 enum class ExportFormat(val extension: String, val mimeType: String) {
@@ -270,7 +438,10 @@ data class AppPreferences(
     val defaultExportFormat: String = ExportFormat.PNG.name,
     val defaultExportQuality: Int = 100,
     val autoSaveEnabled: Boolean = true,
-    val themeMode: String = ThemeMode.SYSTEM.name
+    val themeMode: String = ThemeMode.SYSTEM.name,
+    val showGridLines: Boolean = false,
+    val snapToGrid: Boolean = false,
+    val gridSize: Int = 20
 )
 
 enum class ThemeMode {
@@ -303,8 +474,36 @@ data class ProjectHistory(
         get() = currentIndex < entries.lastIndex
 }
 
+/**
+ * Handle position for resize/rotation
+ */
+enum class HandlePosition {
+    TOP_LEFT,
+    TOP_CENTER,
+    TOP_RIGHT,
+    MIDDLE_LEFT,
+    MIDDLE_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_CENTER,
+    BOTTOM_RIGHT,
+    ROTATION
+}
+
+/**
+ * Element selection state for interactive editing
+ */
+data class ElementSelectionState(
+    val elementId: String? = null,
+    val activeHandle: HandlePosition? = null,
+    val isDragging: Boolean = false,
+    val isResizing: Boolean = false,
+    val isRotating: Boolean = false,
+    val dragStartPosition: Offset = Offset.Zero,
+    val initialPosition: ElementPosition = ElementPosition()
+)
+
 // Extension functions for color conversion
-fun Long.toComposeColor(): Color = Color(this)
+fun Long.toComposeColor(): Color = Color(this.toULong())
 fun Color.toLongColor(): Long = this.value.toLong()
 
 // Extension for TextAlign conversion
@@ -332,4 +531,14 @@ fun Int.toComposeFontWeight(): FontWeight = when {
 fun TextFontStyle.toComposeFontStyle(): FontStyle = when (this) {
     TextFontStyle.NORMAL -> FontStyle.Normal
     TextFontStyle.ITALIC -> FontStyle.Italic
+}
+
+// Apply text transform
+fun String.applyTransform(transform: TextTransform): String = when (transform) {
+    TextTransform.NONE -> this
+    TextTransform.UPPERCASE -> this.uppercase()
+    TextTransform.LOWERCASE -> this.lowercase()
+    TextTransform.CAPITALIZE -> this.split(" ").joinToString(" ") {
+        it.replaceFirstChar { char -> char.uppercase() }
+    }
 }

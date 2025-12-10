@@ -20,14 +20,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ColorLens
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Pattern
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -47,6 +51,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.quotey.create.data.model.BackgroundSettings
 import com.quotey.create.data.model.BackgroundType
@@ -56,6 +61,9 @@ import com.quotey.create.data.model.PatternSettings
 import com.quotey.create.data.model.PatternType
 import com.quotey.create.ui.screens.editor.ColorPickerTarget
 import com.quotey.create.ui.theme.PresetColors
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun BackgroundSheet(
@@ -271,7 +279,22 @@ private fun GradientContent(
     onGradientChanged: (GradientSettings) -> Unit,
     onColorPickerRequest: (ColorPickerTarget) -> Unit
 ) {
+    var selectedColorIndex by remember { mutableIntStateOf(0) }
+
     Column {
+        // Live gradient preview
+        SectionTitle("Preview")
+        GradientPreview(
+            gradient = gradient,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(16.dp))
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         // Gradient type selector
         SectionTitle("Gradient Type")
         Row(
@@ -301,11 +324,50 @@ private fun GradientContent(
                         else
                             MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(12.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Gradient colors editor
+        SectionTitle("Colors")
+        GradientColorEditor(
+            colors = gradient.colors,
+            selectedIndex = selectedColorIndex,
+            onColorIndexSelected = { selectedColorIndex = it },
+            onColorChanged = { index, color ->
+                val newColors = gradient.colors.toMutableList()
+                if (index < newColors.size) {
+                    newColors[index] = color
+                }
+                onGradientChanged(gradient.copy(colors = newColors))
+            },
+            onAddColor = {
+                if (gradient.colors.size < 5) {
+                    val newColors = gradient.colors.toMutableList()
+                    newColors.add(0xFFFFFFFF)
+                    onGradientChanged(gradient.copy(colors = newColors))
+                }
+            },
+            onRemoveColor = { index ->
+                if (gradient.colors.size > 2) {
+                    val newColors = gradient.colors.toMutableList()
+                    newColors.removeAt(index)
+                    if (selectedColorIndex >= newColors.size) {
+                        selectedColorIndex = newColors.size - 1
+                    }
+                    onGradientChanged(gradient.copy(colors = newColors))
+                }
+            },
+            onCustomColorRequest = {
+                // Store selected index and open color picker
+                onColorPickerRequest(ColorPickerTarget.GRADIENT_COLOR)
+            },
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -366,6 +428,35 @@ private fun GradientContent(
                 valueLabel = "${gradient.angle.toInt()}°",
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
+
+            // Quick angle buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(0f, 45f, 90f, 135f, 180f, 225f, 270f, 315f).forEach { angle ->
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onGradientChanged(gradient.copy(angle = angle)) },
+                        color = if (gradient.angle.toInt() == angle.toInt())
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "${angle.toInt()}°",
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        )
+                    }
+                }
+            }
         }
 
         // Center position (for radial/sweep)
@@ -389,6 +480,49 @@ private fun GradientContent(
                 valueLabel = String.format("%.2f", gradient.centerY),
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
+
+            // Quick position presets
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    "TL" to Pair(0f, 0f),
+                    "T" to Pair(0.5f, 0f),
+                    "TR" to Pair(1f, 0f),
+                    "L" to Pair(0f, 0.5f),
+                    "C" to Pair(0.5f, 0.5f),
+                    "R" to Pair(1f, 0.5f),
+                    "BL" to Pair(0f, 1f),
+                    "B" to Pair(0.5f, 1f),
+                    "BR" to Pair(1f, 1f)
+                ).forEach { (label, position) ->
+                    val isSelected = gradient.centerX == position.first && gradient.centerY == position.second
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable {
+                                onGradientChanged(gradient.copy(centerX = position.first, centerY = position.second))
+                            },
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.primaryContainer
+                        else
+                            MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(vertical = 6.dp)
+                        )
+                    }
+                }
+            }
         }
 
         // Radius (for radial)
@@ -408,6 +542,197 @@ private fun GradientContent(
 }
 
 @Composable
+private fun GradientPreview(
+    gradient: GradientSettings,
+    modifier: Modifier = Modifier
+) {
+    val colors = gradient.colors.map { Color(it.toULong()) }
+    val brush = when (gradient.type) {
+        GradientType.LINEAR -> {
+            val angleRad = gradient.angle * PI.toFloat() / 180f
+            Brush.linearGradient(
+                colors = colors,
+                start = androidx.compose.ui.geometry.Offset(
+                    0.5f - cos(angleRad) * 0.5f,
+                    0.5f - sin(angleRad) * 0.5f
+                ),
+                end = androidx.compose.ui.geometry.Offset(
+                    0.5f + cos(angleRad) * 0.5f,
+                    0.5f + sin(angleRad) * 0.5f
+                )
+            )
+        }
+        GradientType.RADIAL -> Brush.radialGradient(
+            colors = colors,
+            center = androidx.compose.ui.geometry.Offset(gradient.centerX, gradient.centerY),
+            radius = gradient.radius * 500f
+        )
+        GradientType.SWEEP -> Brush.sweepGradient(
+            colors = colors,
+            center = androidx.compose.ui.geometry.Offset(gradient.centerX * 500f, gradient.centerY * 500f)
+        )
+        GradientType.MESH -> Brush.linearGradient(colors)
+    }
+
+    Box(
+        modifier = modifier.background(brush)
+    )
+}
+
+@Composable
+private fun GradientColorEditor(
+    colors: List<Long>,
+    selectedIndex: Int,
+    onColorIndexSelected: (Int) -> Unit,
+    onColorChanged: (Int, Long) -> Unit,
+    onAddColor: () -> Unit,
+    onRemoveColor: (Int) -> Unit,
+    onCustomColorRequest: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        // Color stops
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            colors.forEachIndexed { index, colorLong ->
+                val color = Color(colorLong.toULong())
+                val isSelected = index == selectedIndex
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(color)
+                        .then(
+                            if (isSelected) {
+                                Modifier.border(
+                                    width = 3.dp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            } else {
+                                Modifier.border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+                        )
+                        .clickable { onColorIndexSelected(index) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSelected) {
+                        Icon(
+                            imageVector = Icons.Rounded.Check,
+                            contentDescription = null,
+                            tint = if (color.luminance() > 0.5f) Color.Black else Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            // Add color button if less than 5 colors
+            if (colors.size < 5) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .clickable { onAddColor() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Add,
+                        contentDescription = "Add color",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Edit selected color
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Quick color presets for selected slot
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                PresetColors.SolidColors.take(12).forEach { presetColor ->
+                    val colorLong = presetColor.value.toLong()
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(presetColor)
+                            .border(
+                                width = 1.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant,
+                                shape = CircleShape
+                            )
+                            .clickable {
+                                onColorChanged(selectedIndex, colorLong)
+                            }
+                    )
+                }
+
+                // Custom color button
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = CircleShape
+                        )
+                        .clickable { onCustomColorRequest() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.ColorLens,
+                        contentDescription = "Custom",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
+            // Remove button (if more than 2 colors)
+            if (colors.size > 2) {
+                FilledTonalIconButton(
+                    onClick = { onRemoveColor(selectedIndex) }
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = "Remove color"
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PatternContent(
     pattern: PatternSettings,
     onPatternChanged: (PatternSettings) -> Unit,
@@ -422,15 +747,19 @@ private fun PatternContent(
             PatternType.DOTS to "Dots",
             PatternType.GRID to "Grid",
             PatternType.DIAGONAL_LINES to "Diagonal",
+            PatternType.CROSS_HATCH to "Crosshatch",
             PatternType.WAVES to "Waves",
             PatternType.CIRCLES to "Circles",
             PatternType.HEXAGONS to "Hexagons",
             PatternType.TRIANGLES to "Triangles",
+            PatternType.CHEVRON to "Chevron",
+            PatternType.DIAMOND to "Diamond",
             PatternType.SCATTERED_DOTS to "Scattered",
             PatternType.PARALLEL_LINES to "Lines",
             PatternType.CORNER_ACCENT to "Corner",
             PatternType.SOFT_SHAPES to "Soft",
-            PatternType.ORGANIC_BLOBS to "Blobs"
+            PatternType.ORGANIC_BLOBS to "Blobs",
+            PatternType.FRAME to "Frame"
         )
 
         val chunkedPatterns = patternTypes.chunked(4)
@@ -463,7 +792,7 @@ private fun PatternContent(
                                 else
                                     MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -475,6 +804,18 @@ private fun PatternContent(
         }
 
         if (pattern.type != PatternType.NONE) {
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Background color
+            SectionTitle("Background Color")
+            ColorPresetRow(
+                selectedColor = pattern.backgroundColor,
+                colors = PresetColors.SolidColors.take(12).map { it.value.toLong() },
+                onColorSelected = { onPatternChanged(pattern.copy(backgroundColor = it)) },
+                onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.PATTERN_SECONDARY) },
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
 
             // Pattern color
