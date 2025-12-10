@@ -279,7 +279,20 @@ private fun GradientContent(
     onGradientChanged: (GradientSettings) -> Unit,
     onColorPickerRequest: (ColorPickerTarget) -> Unit
 ) {
+    // Keep selectedColorIndex in bounds when colors list changes
     var selectedColorIndex by remember { mutableIntStateOf(0) }
+
+    // Ensure selectedColorIndex is always valid
+    val safeSelectedIndex = if (gradient.colors.isNotEmpty()) {
+        selectedColorIndex.coerceIn(0, gradient.colors.lastIndex)
+    } else {
+        0
+    }
+
+    // Update selectedColorIndex if it was out of bounds
+    if (safeSelectedIndex != selectedColorIndex) {
+        selectedColorIndex = safeSelectedIndex
+    }
 
     Column {
         // Live gradient preview
@@ -336,8 +349,8 @@ private fun GradientContent(
         SectionTitle("Colors")
         GradientColorEditor(
             colors = gradient.colors,
-            selectedIndex = selectedColorIndex,
-            onColorIndexSelected = { selectedColorIndex = it },
+            selectedIndex = safeSelectedIndex,
+            onColorIndexSelected = { selectedColorIndex = it.coerceIn(0, gradient.colors.lastIndex.coerceAtLeast(0)) },
             onColorChanged = { index, color ->
                 val newColors = gradient.colors.toMutableList()
                 if (index < newColors.size) {
@@ -353,11 +366,11 @@ private fun GradientContent(
                 }
             },
             onRemoveColor = { index ->
-                if (gradient.colors.size > 2) {
+                if (gradient.colors.size > 2 && index >= 0 && index < gradient.colors.size) {
                     val newColors = gradient.colors.toMutableList()
                     newColors.removeAt(index)
                     if (selectedColorIndex >= newColors.size) {
-                        selectedColorIndex = newColors.size - 1
+                        selectedColorIndex = (newColors.size - 1).coerceAtLeast(0)
                     }
                     onGradientChanged(gradient.copy(colors = newColors))
                 }
@@ -546,12 +559,17 @@ private fun GradientPreview(
     gradient: GradientSettings,
     modifier: Modifier = Modifier
 ) {
-    val colors = gradient.colors.map { Color(it.toULong()) }
-    val brush = when (gradient.type) {
+    // Ensure we have at least 2 colors for gradients
+    val safeColors = when {
+        gradient.colors.size >= 2 -> gradient.colors.map { Color(it.toULong()) }
+        gradient.colors.size == 1 -> listOf(Color(gradient.colors[0].toULong()), Color(gradient.colors[0].toULong()))
+        else -> listOf(Color.White, Color.LightGray)
+    }
+    val brush = try { when (gradient.type) {
         GradientType.LINEAR -> {
             val angleRad = gradient.angle * PI.toFloat() / 180f
             Brush.linearGradient(
-                colors = colors,
+                colors = safeColors,
                 start = androidx.compose.ui.geometry.Offset(
                     0.5f - cos(angleRad) * 0.5f,
                     0.5f - sin(angleRad) * 0.5f
@@ -563,15 +581,18 @@ private fun GradientPreview(
             )
         }
         GradientType.RADIAL -> Brush.radialGradient(
-            colors = colors,
+            colors = safeColors,
             center = androidx.compose.ui.geometry.Offset(gradient.centerX, gradient.centerY),
             radius = gradient.radius * 500f
         )
         GradientType.SWEEP -> Brush.sweepGradient(
-            colors = colors,
+            colors = safeColors,
             center = androidx.compose.ui.geometry.Offset(gradient.centerX * 500f, gradient.centerY * 500f)
         )
-        GradientType.MESH -> Brush.linearGradient(colors)
+        GradientType.MESH -> Brush.linearGradient(safeColors)
+    } } catch (e: Exception) {
+        // Fallback brush in case of any error
+        Brush.linearGradient(listOf(Color.White, Color.LightGray))
     }
 
     Box(
@@ -590,6 +611,9 @@ private fun GradientColorEditor(
     onCustomColorRequest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Ensure selectedIndex is always valid
+    val safeIndex = if (colors.isNotEmpty()) selectedIndex.coerceIn(0, colors.lastIndex) else 0
+
     Column(modifier = modifier) {
         // Color stops
         Row(
@@ -598,7 +622,7 @@ private fun GradientColorEditor(
         ) {
             colors.forEachIndexed { index, colorLong ->
                 val color = Color(colorLong.toULong())
-                val isSelected = index == selectedIndex
+                val isSelected = index == safeIndex
 
                 Box(
                     modifier = Modifier
@@ -689,7 +713,7 @@ private fun GradientColorEditor(
                                 shape = CircleShape
                             )
                             .clickable {
-                                onColorChanged(selectedIndex, colorLong)
+                                onColorChanged(safeIndex, colorLong)
                             }
                     )
                 }
@@ -720,7 +744,7 @@ private fun GradientColorEditor(
             // Remove button (if more than 2 colors)
             if (colors.size > 2) {
                 FilledTonalIconButton(
-                    onClick = { onRemoveColor(selectedIndex) }
+                    onClick = { onRemoveColor(safeIndex) }
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,

@@ -65,9 +65,9 @@ fun ColorPickerSheet(
         rgbToHsv(r, g, b)
     }
 
-    var hue by remember { mutableFloatStateOf(initialHsv[0]) }
-    var saturation by remember { mutableFloatStateOf(initialHsv[1]) }
-    var value by remember { mutableFloatStateOf(initialHsv[2]) }
+    var hue by remember { mutableFloatStateOf(initialHsv.getOrElse(0) { 0f }) }
+    var saturation by remember { mutableFloatStateOf(initialHsv.getOrElse(1) { 0f }) }
+    var value by remember { mutableFloatStateOf(initialHsv.getOrElse(2) { 1f }) }
     var alpha by remember { mutableFloatStateOf(initialColorObj.alpha) }
 
     var hexInput by remember(initialColor) {
@@ -202,9 +202,9 @@ fun ColorPickerSheet(
                                     val g = android.graphics.Color.green(color) / 255f
                                     val b = android.graphics.Color.blue(color) / 255f
                                     val hsv = rgbToHsv(r, g, b)
-                                    hue = hsv[0]
-                                    saturation = hsv[1]
-                                    value = hsv[2]
+                                    hue = hsv.getOrElse(0) { 0f }
+                                    saturation = hsv.getOrElse(1) { 0f }
+                                    value = hsv.getOrElse(2) { 1f }
                                 } catch (e: Exception) {
                                     // Invalid hex
                                 }
