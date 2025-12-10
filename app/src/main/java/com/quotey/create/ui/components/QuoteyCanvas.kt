@@ -220,7 +220,9 @@ private fun BackgroundLayer(
             val safeColors = if (gradient.colors.size >= 2) {
                 gradient.colors.map { Color(it.toULong()) }
             } else if (gradient.colors.size == 1) {
-                listOf(Color(gradient.colors[0].toULong()), Color(gradient.colors[0].toULong()))
+                gradient.colors.getOrNull(0)?.let { color ->
+                    listOf(Color(color.toULong()), Color(color.toULong()))
+                } ?: listOf(Color.White, Color.LightGray)
             } else {
                 listOf(Color.White, Color.LightGray)
             }

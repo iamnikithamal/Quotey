@@ -559,10 +559,12 @@ private fun GradientPreview(
     gradient: GradientSettings,
     modifier: Modifier = Modifier
 ) {
-    // Ensure we have at least 2 colors for gradients
+    // Ensure we have at least 2 colors for gradients with safe access
     val safeColors = when {
         gradient.colors.size >= 2 -> gradient.colors.map { Color(it.toULong()) }
-        gradient.colors.size == 1 -> listOf(Color(gradient.colors[0].toULong()), Color(gradient.colors[0].toULong()))
+        gradient.colors.size == 1 -> gradient.colors.getOrNull(0)?.let { color ->
+            listOf(Color(color.toULong()), Color(color.toULong()))
+        } ?: listOf(Color.White, Color.LightGray)
         else -> listOf(Color.White, Color.LightGray)
     }
     val brush = try { when (gradient.type) {

@@ -101,7 +101,14 @@ class BitmapExporter(private val context: Context) {
 
             BackgroundType.GRADIENT -> {
                 val gradient = background.gradient
-                val colors = gradient.colors.map { it.toInt() }.toIntArray()
+                // Ensure at least 2 colors for Android gradient constructors
+                val colors = when {
+                    gradient.colors.size >= 2 -> gradient.colors.map { it.toInt() }.toIntArray()
+                    gradient.colors.size == 1 -> gradient.colors.getOrNull(0)?.let { color ->
+                        intArrayOf(color.toInt(), color.toInt())
+                    } ?: intArrayOf(Color.WHITE, Color.LTGRAY)
+                    else -> intArrayOf(Color.WHITE, Color.LTGRAY)
+                }
 
                 val shader = when (gradient.type) {
                     GradientType.LINEAR -> {
