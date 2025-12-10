@@ -216,26 +216,34 @@ private fun BackgroundLayer(
 
         BackgroundType.GRADIENT -> {
             val gradient = background.gradient
-            // Ensure we have at least 2 colors for gradients, with safe fallback
-            val safeColors = if (gradient.colors.size >= 2) {
-                gradient.colors.map { Color(it.toULong()) }
-            } else if (gradient.colors.size == 1) {
-                gradient.colors.getOrNull(0)?.let { color ->
-                    listOf(Color(color.toULong()), Color(color.toULong()))
-                } ?: listOf(Color.White, Color.LightGray)
-            } else {
-                listOf(Color.White, Color.LightGray)
+            // Ensure we have at least 2 valid colors for gradients, with safe fallback
+            // Also deduplicate adjacent identical colors to prevent rendering issues
+            val rawColors = when {
+                gradient.colors.size >= 2 -> gradient.colors.mapNotNull { colorLong ->
+                    try { Color(colorLong.toULong()) } catch (e: Exception) { null }
+                }
+                gradient.colors.size == 1 -> {
+                    val color = try { Color(gradient.colors[0].toULong()) } catch (e: Exception) { Color.White }
+                    listOf(color, color)
+                }
+                else -> listOf(Color.White, Color.LightGray)
             }
+
+            // Ensure we have at least 2 colors after filtering
+            val safeColors = if (rawColors.size >= 2) rawColors else listOf(Color.White, Color.LightGray)
 
             Box(modifier = modifier) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
+                    // Guard against zero/negative dimensions
+                    if (size.width <= 0f || size.height <= 0f) return@Canvas
+
                     val brush = try {
                         when (gradient.type) {
                             GradientType.LINEAR -> {
                                 val angleRad = gradient.angle * PI.toFloat() / 180f
                                 val centerX = size.width / 2f
                                 val centerY = size.height / 2f
-                                val len = maxOf(size.width, size.height) / 2f
+                                val len = maxOf(size.width, size.height).coerceAtLeast(1f) / 2f
 
                                 Brush.linearGradient(
                                     colors = safeColors,
@@ -250,21 +258,22 @@ private fun BackgroundLayer(
                                 )
                             }
                             GradientType.RADIAL -> {
+                                val radius = (gradient.radius * maxOf(size.width, size.height)).coerceAtLeast(1f)
                                 Brush.radialGradient(
                                     colors = safeColors,
                                     center = Offset(
-                                        gradient.centerX * size.width,
-                                        gradient.centerY * size.height
+                                        (gradient.centerX * size.width).coerceIn(0f, size.width),
+                                        (gradient.centerY * size.height).coerceIn(0f, size.height)
                                     ),
-                                    radius = gradient.radius * maxOf(size.width, size.height)
+                                    radius = radius
                                 )
                             }
                             GradientType.SWEEP -> {
                                 Brush.sweepGradient(
                                     colors = safeColors,
                                     center = Offset(
-                                        gradient.centerX * size.width,
-                                        gradient.centerY * size.height
+                                        (gradient.centerX * size.width).coerceIn(0f, size.width),
+                                        (gradient.centerY * size.height).coerceIn(0f, size.height)
                                     )
                                 )
                             }
@@ -274,10 +283,21 @@ private fun BackgroundLayer(
                             }
                         }
                     } catch (e: Exception) {
-                        // Fallback brush in case of any error
-                        Brush.linearGradient(colors = listOf(Color.White, Color.LightGray))
+                        // Fallback to solid color on any gradient creation error
+                        null
                     }
-                    drawRect(brush = brush)
+
+                    if (brush != null) {
+                        try {
+                            drawRect(brush = brush)
+                        } catch (e: Exception) {
+                            // If drawing with brush fails, fall back to solid color
+                            drawRect(color = safeColors.firstOrNull() ?: Color.White)
+                        }
+                    } else {
+                        // Fallback solid color
+                        drawRect(color = safeColors.firstOrNull() ?: Color.White)
+                    }
                 }
             }
         }

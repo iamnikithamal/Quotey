@@ -559,47 +559,94 @@ private fun GradientPreview(
     gradient: GradientSettings,
     modifier: Modifier = Modifier
 ) {
-    // Ensure we have at least 2 colors for gradients with safe access
-    val safeColors = when {
-        gradient.colors.size >= 2 -> gradient.colors.map { Color(it.toULong()) }
-        gradient.colors.size == 1 -> gradient.colors.getOrNull(0)?.let { color ->
-            listOf(Color(color.toULong()), Color(color.toULong()))
-        } ?: listOf(Color.White, Color.LightGray)
+    // Ensure we have at least 2 valid colors for gradients with safe access
+    val rawColors = when {
+        gradient.colors.size >= 2 -> gradient.colors.mapNotNull { colorLong ->
+            try { Color(colorLong.toULong()) } catch (e: Exception) { null }
+        }
+        gradient.colors.size == 1 -> {
+            val color = try { Color(gradient.colors[0].toULong()) } catch (e: Exception) { Color.White }
+            listOf(color, color)
+        }
         else -> listOf(Color.White, Color.LightGray)
     }
-    val brush = try { when (gradient.type) {
-        GradientType.LINEAR -> {
-            val angleRad = gradient.angle * PI.toFloat() / 180f
-            Brush.linearGradient(
-                colors = safeColors,
-                start = androidx.compose.ui.geometry.Offset(
-                    0.5f - cos(angleRad) * 0.5f,
-                    0.5f - sin(angleRad) * 0.5f
-                ),
-                end = androidx.compose.ui.geometry.Offset(
-                    0.5f + cos(angleRad) * 0.5f,
-                    0.5f + sin(angleRad) * 0.5f
-                )
-            )
-        }
-        GradientType.RADIAL -> Brush.radialGradient(
-            colors = safeColors,
-            center = androidx.compose.ui.geometry.Offset(gradient.centerX, gradient.centerY),
-            radius = gradient.radius * 500f
-        )
-        GradientType.SWEEP -> Brush.sweepGradient(
-            colors = safeColors,
-            center = androidx.compose.ui.geometry.Offset(gradient.centerX * 500f, gradient.centerY * 500f)
-        )
-        GradientType.MESH -> Brush.linearGradient(safeColors)
-    } } catch (e: Exception) {
-        // Fallback brush in case of any error
-        Brush.linearGradient(listOf(Color.White, Color.LightGray))
-    }
+
+    // Ensure we have at least 2 colors after filtering
+    val safeColors = if (rawColors.size >= 2) rawColors else listOf(Color.White, Color.LightGray)
+
+    // Use remember to cache the first color for fallback
+    val fallbackColor = safeColors.firstOrNull() ?: Color.White
 
     Box(
-        modifier = modifier.background(brush)
-    )
+        modifier = modifier
+            .background(fallbackColor) // Solid fallback behind the gradient
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+        ) {
+            // Guard against zero/negative dimensions
+            if (size.width <= 0f || size.height <= 0f) return@Canvas
+
+            val brush = try {
+                when (gradient.type) {
+                    GradientType.LINEAR -> {
+                        val angleRad = gradient.angle * PI.toFloat() / 180f
+                        val centerX = size.width / 2f
+                        val centerY = size.height / 2f
+                        val len = maxOf(size.width, size.height).coerceAtLeast(1f) / 2f
+
+                        Brush.linearGradient(
+                            colors = safeColors,
+                            start = androidx.compose.ui.geometry.Offset(
+                                centerX - len * cos(angleRad),
+                                centerY - len * sin(angleRad)
+                            ),
+                            end = androidx.compose.ui.geometry.Offset(
+                                centerX + len * cos(angleRad),
+                                centerY + len * sin(angleRad)
+                            )
+                        )
+                    }
+                    GradientType.RADIAL -> {
+                        val radius = (gradient.radius * maxOf(size.width, size.height)).coerceAtLeast(1f)
+                        Brush.radialGradient(
+                            colors = safeColors,
+                            center = androidx.compose.ui.geometry.Offset(
+                                (gradient.centerX * size.width).coerceIn(0f, size.width),
+                                (gradient.centerY * size.height).coerceIn(0f, size.height)
+                            ),
+                            radius = radius
+                        )
+                    }
+                    GradientType.SWEEP -> {
+                        Brush.sweepGradient(
+                            colors = safeColors,
+                            center = androidx.compose.ui.geometry.Offset(
+                                (gradient.centerX * size.width).coerceIn(0f, size.width),
+                                (gradient.centerY * size.height).coerceIn(0f, size.height)
+                            )
+                        )
+                    }
+                    GradientType.MESH -> Brush.linearGradient(safeColors)
+                }
+            } catch (e: Exception) {
+                // Return null to trigger solid fallback
+                null
+            }
+
+            if (brush != null) {
+                try {
+                    drawRect(brush = brush)
+                } catch (e: Exception) {
+                    // If drawing fails, draw solid fallback
+                    drawRect(color = fallbackColor)
+                }
+            }
+            // If brush is null, the solid background behind handles the fallback
+        }
+    }
 }
 
 @Composable

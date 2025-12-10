@@ -101,67 +101,81 @@ class BitmapExporter(private val context: Context) {
 
             BackgroundType.GRADIENT -> {
                 val gradient = background.gradient
-                // Ensure at least 2 colors for Android gradient constructors
-                val colors = when {
-                    gradient.colors.size >= 2 -> gradient.colors.map { it.toInt() }.toIntArray()
-                    gradient.colors.size == 1 -> gradient.colors.getOrNull(0)?.let { color ->
-                        intArrayOf(color.toInt(), color.toInt())
-                    } ?: intArrayOf(Color.WHITE, Color.LTGRAY)
-                    else -> intArrayOf(Color.WHITE, Color.LTGRAY)
+                // Ensure at least 2 valid colors for Android gradient constructors
+                val rawColors = when {
+                    gradient.colors.size >= 2 -> gradient.colors.mapNotNull { colorLong ->
+                        try { colorLong.toInt() } catch (e: Exception) { null }
+                    }
+                    gradient.colors.size == 1 -> {
+                        val color = try { gradient.colors[0].toInt() } catch (e: Exception) { Color.WHITE }
+                        listOf(color, color)
+                    }
+                    else -> listOf(Color.WHITE, Color.LTGRAY)
                 }
 
-                val shader = when (gradient.type) {
-                    GradientType.LINEAR -> {
-                        val angleRad = gradient.angle * PI.toFloat() / 180f
-                        val centerX = width / 2f
-                        val centerY = height / 2f
-                        val len = maxOf(width, height) / 2f
+                // Ensure we have at least 2 colors after filtering
+                val colors = if (rawColors.size >= 2) rawColors.toIntArray() else intArrayOf(Color.WHITE, Color.LTGRAY)
 
-                        LinearGradient(
-                            centerX - len * cos(angleRad),
-                            centerY - len * sin(angleRad),
-                            centerX + len * cos(angleRad),
-                            centerY + len * sin(angleRad),
-                            colors,
-                            null,
-                            Shader.TileMode.CLAMP
-                        )
+                try {
+                    val shader = when (gradient.type) {
+                        GradientType.LINEAR -> {
+                            val angleRad = gradient.angle * PI.toFloat() / 180f
+                            val centerX = width / 2f
+                            val centerY = height / 2f
+                            val len = maxOf(width, height).coerceAtLeast(1) / 2f
+
+                            LinearGradient(
+                                centerX - len * cos(angleRad),
+                                centerY - len * sin(angleRad),
+                                centerX + len * cos(angleRad),
+                                centerY + len * sin(angleRad),
+                                colors,
+                                null,
+                                Shader.TileMode.CLAMP
+                            )
+                        }
+
+                        GradientType.RADIAL -> {
+                            val radius = (gradient.radius * maxOf(width, height)).coerceAtLeast(1f)
+                            RadialGradient(
+                                (gradient.centerX * width).coerceIn(0f, width.toFloat()),
+                                (gradient.centerY * height).coerceIn(0f, height.toFloat()),
+                                radius,
+                                colors,
+                                null,
+                                Shader.TileMode.CLAMP
+                            )
+                        }
+
+                        GradientType.SWEEP -> {
+                            SweepGradient(
+                                (gradient.centerX * width).coerceIn(0f, width.toFloat()),
+                                (gradient.centerY * height).coerceIn(0f, height.toFloat()),
+                                colors,
+                                null
+                            )
+                        }
+
+                        GradientType.MESH -> {
+                            // Fallback to linear for mesh
+                            LinearGradient(
+                                0f, 0f,
+                                width.toFloat().coerceAtLeast(1f), height.toFloat().coerceAtLeast(1f),
+                                colors,
+                                null,
+                                Shader.TileMode.CLAMP
+                            )
+                        }
                     }
 
-                    GradientType.RADIAL -> {
-                        RadialGradient(
-                            gradient.centerX * width,
-                            gradient.centerY * height,
-                            gradient.radius * maxOf(width, height),
-                            colors,
-                            null,
-                            Shader.TileMode.CLAMP
-                        )
-                    }
-
-                    GradientType.SWEEP -> {
-                        SweepGradient(
-                            gradient.centerX * width,
-                            gradient.centerY * height,
-                            colors,
-                            null
-                        )
-                    }
-
-                    GradientType.MESH -> {
-                        // Fallback to linear for mesh
-                        LinearGradient(
-                            0f, 0f,
-                            width.toFloat(), height.toFloat(),
-                            colors,
-                            null,
-                            Shader.TileMode.CLAMP
-                        )
-                    }
+                    paint.shader = shader
+                    canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
+                } catch (e: Exception) {
+                    // Fallback to solid color if gradient creation fails
+                    paint.shader = null
+                    paint.color = colors.firstOrNull() ?: Color.WHITE
+                    canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
                 }
-
-                paint.shader = shader
-                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
             }
 
             BackgroundType.PATTERN -> {
