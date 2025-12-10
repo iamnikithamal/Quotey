@@ -1,17 +1,14 @@
 package com.quotey.create.ui.screens.home
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -22,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
@@ -33,7 +29,6 @@ import androidx.compose.material.icons.rounded.FormatQuote
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,13 +46,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.quotey.create.R
 import com.quotey.create.data.model.AspectRatio
-import com.quotey.create.ui.theme.PresetColors
 
 @Composable
 fun HomeScreen(
@@ -131,26 +126,18 @@ private fun HomeHeader() {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // App icon
+                // App icon - using actual app logo
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.secondary
-                                )
-                            )
-                        ),
+                        .background(MaterialTheme.colorScheme.primary),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "Q",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = "Quotey Logo",
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
@@ -160,7 +147,7 @@ private fun HomeHeader() {
                     Text(
                         text = "Quotey",
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
@@ -235,7 +222,7 @@ private fun EmptyHomeContent(
         Text(
             text = "Quick Start",
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface
         )
 
@@ -247,21 +234,21 @@ private fun EmptyHomeContent(
             QuickStartCard(
                 title = "Instagram",
                 aspectRatio = "1:1",
-                gradient = PresetColors.GradientPresets[0],
+                previewRatio = 1f,
                 onClick = onCreateNew,
                 modifier = Modifier.weight(1f)
             )
             QuickStartCard(
                 title = "Story",
                 aspectRatio = "9:16",
-                gradient = PresetColors.GradientPresets[5],
+                previewRatio = 9f / 16f,
                 onClick = onCreateNew,
                 modifier = Modifier.weight(1f)
             )
             QuickStartCard(
                 title = "Twitter",
                 aspectRatio = "16:9",
-                gradient = PresetColors.GradientPresets[10],
+                previewRatio = 16f / 9f,
                 onClick = onCreateNew,
                 modifier = Modifier.weight(1f)
             )
@@ -273,13 +260,13 @@ private fun EmptyHomeContent(
 private fun QuickStartCard(
     title: String,
     aspectRatio: String,
-    gradient: List<Color>,
+    previewRatio: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var isPressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
+        targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -290,35 +277,51 @@ private fun QuickStartCard(
     Card(
         modifier = modifier
             .scale(scale)
-            .aspectRatio(0.8f)
             .clickable(
                 onClick = {
                     isPressed = true
                     onClick()
                 }
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Minimalist aspect ratio preview box
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Brush.linearGradient(gradient))
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
+                    .height(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val boxModifier = if (previewRatio > 1) {
+                    Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(36.dp)
+                } else if (previewRatio < 1) {
+                    Modifier
+                        .width(32.dp)
+                        .height(52.dp)
+                } else {
+                    Modifier.size(44.dp)
+                }
+                Box(
+                    modifier = boxModifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                )
+            }
 
             Text(
                 text = title,
@@ -422,8 +425,9 @@ private fun AspectRatioCard(
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-        )
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -431,30 +435,35 @@ private fun AspectRatioCard(
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Aspect ratio preview
+            // Aspect ratio preview - minimalist design
             val previewRatio = aspectRatio.ratioWidth.toFloat() / aspectRatio.ratioHeight.toFloat()
-            val boxModifier = if (previewRatio > 1) {
-                Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-            } else {
-                Modifier
-                    .width(40.dp)
-                    .height(60.dp)
-            }
 
             Box(
-                modifier = boxModifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
-                            )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val boxModifier = if (previewRatio > 1) {
+                    Modifier
+                        .fillMaxWidth(0.85f)
+                        .height(32.dp)
+                } else if (previewRatio < 1) {
+                    Modifier
+                        .width(28.dp)
+                        .height(44.dp)
+                } else {
+                    Modifier.size(36.dp)
+                }
+
+                Box(
+                    modifier = boxModifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                         )
-                    )
-            )
+                )
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 

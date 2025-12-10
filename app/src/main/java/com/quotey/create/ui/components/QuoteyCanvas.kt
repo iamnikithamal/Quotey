@@ -216,52 +216,64 @@ private fun BackgroundLayer(
 
         BackgroundType.GRADIENT -> {
             val gradient = background.gradient
-            val colors = gradient.colors.map { Color(it.toULong()) }
+            // Ensure we have at least 2 colors for gradients, with safe fallback
+            val safeColors = if (gradient.colors.size >= 2) {
+                gradient.colors.map { Color(it.toULong()) }
+            } else if (gradient.colors.size == 1) {
+                listOf(Color(gradient.colors[0].toULong()), Color(gradient.colors[0].toULong()))
+            } else {
+                listOf(Color.White, Color.LightGray)
+            }
 
             Box(modifier = modifier) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val brush = when (gradient.type) {
-                        GradientType.LINEAR -> {
-                            val angleRad = gradient.angle * PI.toFloat() / 180f
-                            val centerX = size.width / 2f
-                            val centerY = size.height / 2f
-                            val len = maxOf(size.width, size.height) / 2f
+                    val brush = try {
+                        when (gradient.type) {
+                            GradientType.LINEAR -> {
+                                val angleRad = gradient.angle * PI.toFloat() / 180f
+                                val centerX = size.width / 2f
+                                val centerY = size.height / 2f
+                                val len = maxOf(size.width, size.height) / 2f
 
-                            Brush.linearGradient(
-                                colors = colors,
-                                start = Offset(
-                                    centerX - len * cos(angleRad),
-                                    centerY - len * sin(angleRad)
-                                ),
-                                end = Offset(
-                                    centerX + len * cos(angleRad),
-                                    centerY + len * sin(angleRad)
+                                Brush.linearGradient(
+                                    colors = safeColors,
+                                    start = Offset(
+                                        centerX - len * cos(angleRad),
+                                        centerY - len * sin(angleRad)
+                                    ),
+                                    end = Offset(
+                                        centerX + len * cos(angleRad),
+                                        centerY + len * sin(angleRad)
+                                    )
                                 )
-                            )
-                        }
-                        GradientType.RADIAL -> {
-                            Brush.radialGradient(
-                                colors = colors,
-                                center = Offset(
-                                    gradient.centerX * size.width,
-                                    gradient.centerY * size.height
-                                ),
-                                radius = gradient.radius * maxOf(size.width, size.height)
-                            )
-                        }
-                        GradientType.SWEEP -> {
-                            Brush.sweepGradient(
-                                colors = colors,
-                                center = Offset(
-                                    gradient.centerX * size.width,
-                                    gradient.centerY * size.height
+                            }
+                            GradientType.RADIAL -> {
+                                Brush.radialGradient(
+                                    colors = safeColors,
+                                    center = Offset(
+                                        gradient.centerX * size.width,
+                                        gradient.centerY * size.height
+                                    ),
+                                    radius = gradient.radius * maxOf(size.width, size.height)
                                 )
-                            )
+                            }
+                            GradientType.SWEEP -> {
+                                Brush.sweepGradient(
+                                    colors = safeColors,
+                                    center = Offset(
+                                        gradient.centerX * size.width,
+                                        gradient.centerY * size.height
+                                    )
+                                )
+                            }
+                            GradientType.MESH -> {
+                                // Mesh gradient approximation
+                                Brush.linearGradient(colors = safeColors)
+                            }
                         }
-                        GradientType.MESH -> {
-                            // Mesh gradient approximation
-                            Brush.linearGradient(colors = colors)
-                        }
+                    } catch (e: Exception) {
+                        // Fallback brush in case of any error
+                        Brush.linearGradient(colors = listOf(Color.White, Color.LightGray))
                     }
                     drawRect(brush = brush)
                 }

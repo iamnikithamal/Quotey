@@ -25,7 +25,9 @@ data class QuoteyProject(
     val updatedAt: Long = System.currentTimeMillis()
 ) {
     val currentPage: QuoteyPage
-        get() = pages.getOrElse(currentPageIndex) { pages.first() }
+        get() = pages.getOrElse(currentPageIndex.coerceIn(0, pages.lastIndex.coerceAtLeast(0))) {
+            pages.firstOrNull() ?: QuoteyPage()
+        }
 }
 
 /**
@@ -41,19 +43,26 @@ data class QuoteyPage(
     val selectedElementId: String? = null,
     val elementOrder: List<String> = emptyList() // For z-ordering
 ) {
-    // Get all elements sorted by layer order
+    // Get all elements sorted by layer order with safe bounds checking
     val allElements: List<CanvasElement>
         get() {
-            val allItems = textElements.map { CanvasElement.Text(it) } +
-                    shapeElements.map { CanvasElement.Shape(it) } +
-                    imageElements.map { CanvasElement.Image(it) }
-            return if (elementOrder.isNotEmpty()) {
-                allItems.sortedBy { element ->
-                    val index = elementOrder.indexOf(element.id)
-                    if (index >= 0) index else Int.MAX_VALUE
+            return try {
+                val allItems = textElements.map { CanvasElement.Text(it) } +
+                        shapeElements.map { CanvasElement.Shape(it) } +
+                        imageElements.map { CanvasElement.Image(it) }
+                if (elementOrder.isNotEmpty()) {
+                    allItems.sortedBy { element ->
+                        val index = elementOrder.indexOf(element.id)
+                        if (index >= 0) index else Int.MAX_VALUE
+                    }
+                } else {
+                    allItems
                 }
-            } else {
-                allItems
+            } catch (e: Exception) {
+                // Fallback to unsorted list if sorting fails
+                textElements.map { CanvasElement.Text(it) } +
+                        shapeElements.map { CanvasElement.Shape(it) } +
+                        imageElements.map { CanvasElement.Image(it) }
             }
         }
 }

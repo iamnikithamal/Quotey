@@ -145,7 +145,9 @@ class EditorViewModel @Inject constructor(
             if (!state.history.canUndo) return@update state
 
             val newIndex = state.history.currentIndex - 1
-            val previousPage = state.history.entries[newIndex].page
+            // Safe bounds check
+            if (newIndex < 0 || newIndex >= state.history.entries.size) return@update state
+            val previousPage = state.history.entries.getOrNull(newIndex)?.page ?: return@update state
             val updatedProject = projectRepository.updateCurrentPage(state.project) { previousPage }
 
             state.copy(
@@ -160,7 +162,9 @@ class EditorViewModel @Inject constructor(
             if (!state.history.canRedo) return@update state
 
             val newIndex = state.history.currentIndex + 1
-            val nextPage = state.history.entries[newIndex].page
+            // Safe bounds check
+            if (newIndex < 0 || newIndex >= state.history.entries.size) return@update state
+            val nextPage = state.history.entries.getOrNull(newIndex)?.page ?: return@update state
             val updatedProject = projectRepository.updateCurrentPage(state.project) { nextPage }
 
             state.copy(
