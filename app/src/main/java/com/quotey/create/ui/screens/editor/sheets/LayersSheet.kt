@@ -280,7 +280,7 @@ private fun LayerItem(
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    imageVector = KeyboardArrowUp,
+                    imageVector = Icons.Rounded.KeyboardArrowUp,
                     contentDescription = "Move up",
                     modifier = Modifier.size(18.dp),
                     tint = if (!isLast)
@@ -297,7 +297,7 @@ private fun LayerItem(
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
-                    imageVector = KeyboardArrowDown,
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = "Move down",
                     modifier = Modifier.size(18.dp),
                     tint = if (!isFirst)
