@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Quotey</string>
+    <string name="app_tagline">Create Beautiful Quote Images</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to Quotey</string>
+    <string name="onboarding_welcome_description">Transform your words into stunning visual masterpieces</string>
+
+    <string name="onboarding_customize_title">Endless Customization</string>
+    <string name="onboarding_customize_description">Choose from beautiful gradients, colors, patterns, fonts, and more</string>
+
+    <string name="onboarding_export_title">Share Everywhere</string>
+    <string name="onboarding_export_description">Export in any size or aspect ratio perfect for any social platform</string>
+
+    <string name="onboarding_get_started">Get Started</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_skip">Skip</string>
+
+    <!-- Editor -->
+    <string name="editor_title">Editor</string>
+    <string name="editor_text_placeholder">Tap to add your text...</string>
+    <string name="editor_untitled">Untitled</string>
+
+    <!-- Bottom Sheet Sections -->
+    <string name="section_text">Text</string>
+    <string name="section_background">Background</string>
+    <string name="section_canvas">Canvas</string>
+    <string name="section_layers">Layers</string>
+
+    <!-- Text Options -->
+    <string name="text_content">Content</string>
+    <string name="text_font">Font</string>
+    <string name="text_size">Size</string>
+    <string name="text_color">Color</string>
+    <string name="text_alignment">Alignment</string>
+    <string name="text_line_height">Line Height</string>
+    <string name="text_letter_spacing">Letter Spacing</string>
+    <string name="text_shadow">Shadow</string>
+    <string name="text_style">Style</string>
+
+    <!-- Background Options -->
+    <string name="background_solid">Solid Color</string>
+    <string name="background_gradient">Gradient</string>
+    <string name="background_pattern">Pattern</string>
+    <string name="background_image">Image</string>
+
+    <!-- Gradient Types -->
+    <string name="gradient_linear">Linear</string>
+    <string name="gradient_radial">Radial</string>
+    <string name="gradient_sweep">Sweep</string>
+    <string name="gradient_mesh">Mesh</string>
+
+    <!-- Canvas Options -->
+    <string name="canvas_size">Size</string>
+    <string name="canvas_aspect_ratio">Aspect Ratio</string>
+    <string name="canvas_corner_radius">Corner Radius</string>
+    <string name="canvas_padding">Padding</string>
+
+    <!-- Aspect Ratios -->
+    <string name="aspect_square">Square (1:1)</string>
+    <string name="aspect_portrait">Portrait (4:5)</string>
+    <string name="aspect_landscape">Landscape (16:9)</string>
+    <string name="aspect_story">Story (9:16)</string>
+    <string name="aspect_twitter">Twitter (16:9)</string>
+    <string name="aspect_facebook">Facebook (1.91:1)</string>
+    <string name="aspect_pinterest">Pinterest (2:3)</string>
+    <string name="aspect_custom">Custom</string>
+
+    <!-- Actions -->
+    <string name="action_export">Export</string>
+    <string name="action_share">Share</string>
+    <string name="action_save">Save</string>
+    <string name="action_save_project">Save Project</string>
+    <string name="action_new_project">New Project</string>
+    <string name="action_add_page">Add Page</string>
+    <string name="action_delete_page">Delete Page</string>
+    <string name="action_duplicate_page">Duplicate Page</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_done">Done</string>
+
+    <!-- Export -->
+    <string name="export_title">Export Options</string>
+    <string name="export_format">Format</string>
+    <string name="export_quality">Quality</string>
+    <string name="export_all_pages">Export All Pages</string>
+    <string name="export_current_page">Export Current Page</string>
+    <string name="export_success">Image saved successfully!</string>
+    <string name="export_error">Failed to export image</string>
+
+    <!-- Pages -->
+    <string name="page_label">Page %1$d of %2$d</string>
+
+    <!-- Patterns -->
+    <string name="pattern_geometric">Geometric</string>
+    <string name="pattern_dots">Dots</string>
+    <string name="pattern_lines">Lines</string>
+    <string name="pattern_waves">Waves</string>
+    <string name="pattern_circles">Circles</string>
+    <string name="pattern_abstract">Abstract</string>
+
+    <!-- Home -->
+    <string name="home_recent_projects">Recent Projects</string>
+    <string name="home_templates">Templates</string>
+    <string name="home_create_new">Create New</string>
+    <string name="home_no_projects">No projects yet</string>
+    <string name="home_start_creating">Start creating your first quote!</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_default_export_format">Default Export Format</string>
+    <string name="settings_default_quality">Default Quality</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version</string>
+
+    <!-- Content Descriptions -->
+    <string name="cd_close">Close</string>
+    <string name="cd_menu">Menu</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_color_picker">Color picker</string>
+    <string name="cd_page_thumbnail">Page thumbnail</string>
+    <string name="cd_add_text">Add text</string>
+    <string name="cd_delete">Delete</string>
+    <string name="cd_drag_handle">Drag to reorder</string>
+</resources>
