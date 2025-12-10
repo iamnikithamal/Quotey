@@ -1,12 +1,15 @@
 package com.quotey.create
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -31,11 +34,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
 
-        // Set up global exception handler
-        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
-            handleUncaughtException(thread, throwable)
-        }
-
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
@@ -57,21 +55,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    private fun handleUncaughtException(thread: Thread, throwable: Throwable) {
-        val errorMessage = throwable.message ?: throwable.javaClass.simpleName
-        val stackTrace = throwable.stackTraceToString()
-        val cause = throwable.cause?.toString() ?: ""
-
-        val intent = Intent(this, DebugActivity::class.java).apply {
-            putExtra(DebugActivity.EXTRA_ERROR_MESSAGE, errorMessage)
-            putExtra(DebugActivity.EXTRA_ERROR_STACKTRACE, stackTrace)
-            putExtra(DebugActivity.EXTRA_ERROR_CAUSE, cause)
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        startActivity(intent)
-        finish()
-    }
 }
 
 @Composable
@@ -86,8 +69,12 @@ fun QuoteyApp(
     }
 
     QuoteyTheme(darkTheme = isDarkTheme) {
+        val systemBarsPadding = WindowInsets.systemBars.asPaddingValues()
+
         Surface(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(systemBarsPadding)
         ) {
             val navController = rememberNavController()
             val startDestination = if (hasCompletedOnboarding) {

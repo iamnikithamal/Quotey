@@ -1,20 +1,22 @@
 package com.quotey.create
 
-import android.app.Activity
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,14 +33,13 @@ import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.quotey.create.ui.theme.QuoteyTheme
 
-class DebugActivity : AppCompatActivity() {
+class DebugActivity : ComponentActivity() {
     companion object {
         const val EXTRA_ERROR_MESSAGE = "error_message"
         const val EXTRA_ERROR_STACKTRACE = "error_stacktrace"
@@ -51,6 +52,9 @@ class DebugActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
 
         errorMessage = intent?.getStringExtra(EXTRA_ERROR_MESSAGE) ?: "Unknown Error"
         errorStacktrace = intent?.getStringExtra(EXTRA_ERROR_STACKTRACE) ?: ""
@@ -115,6 +119,8 @@ private fun DebugErrorScreen(
     onCopy: () -> Unit,
     onRestart: () -> Unit
 ) {
+    val systemBarsPadding = WindowInsets.systemBars.asPaddingValues()
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -122,6 +128,7 @@ private fun DebugErrorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(systemBarsPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.SpaceBetween
