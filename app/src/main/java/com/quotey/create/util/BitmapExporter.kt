@@ -463,7 +463,15 @@ class BitmapExporter(private val context: Context) {
             val compressFormat = when (settings.format) {
                 ExportFormat.PNG -> Bitmap.CompressFormat.PNG
                 ExportFormat.JPEG -> Bitmap.CompressFormat.JPEG
-                ExportFormat.WEBP -> Bitmap.CompressFormat.WEBP_LOSSY
+                ExportFormat.WEBP -> {
+                    // WEBP_LOSSY requires API 30+, fall back to deprecated WEBP for older versions
+                    @Suppress("DEPRECATION")
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Bitmap.CompressFormat.WEBP_LOSSY
+                    } else {
+                        Bitmap.CompressFormat.WEBP
+                    }
+                }
             }
 
             val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
