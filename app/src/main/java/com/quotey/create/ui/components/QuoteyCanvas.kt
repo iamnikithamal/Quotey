@@ -989,15 +989,20 @@ private fun TextElementView(
             )
         }
 
+        // Safely convert font weight to ensure it's within standard bounds (100-900)
+        // This prevents potential array index issues in Compose's font resolution
+        val safeFontWeight = style.fontWeight.coerceIn(100, 900).toComposeFontWeight()
+        val safeFontStyle = if (style.fontStyle == TextFontStyle.ITALIC) FontStyle.Italic else FontStyle.Normal
+
         val textStyle = TextStyle(
             fontFamily = PoppinsFamily,
-            fontSize = style.fontSize.sp,
-            fontWeight = style.fontWeight.toComposeFontWeight(),
-            fontStyle = if (style.fontStyle == TextFontStyle.ITALIC) FontStyle.Italic else FontStyle.Normal,
+            fontSize = style.fontSize.coerceIn(1f, 500f).sp,
+            fontWeight = safeFontWeight,
+            fontStyle = safeFontStyle,
             color = Color(style.color.toULong()),
             textAlign = style.textAlign.toComposeTextAlign(),
-            lineHeight = (style.fontSize * style.lineHeight).sp,
-            letterSpacing = style.letterSpacing.sp,
+            lineHeight = (style.fontSize.coerceIn(1f, 500f) * style.lineHeight.coerceIn(0.5f, 5f)).sp,
+            letterSpacing = style.letterSpacing.coerceIn(-10f, 50f).sp,
             textDecoration = textDecoration
         )
 

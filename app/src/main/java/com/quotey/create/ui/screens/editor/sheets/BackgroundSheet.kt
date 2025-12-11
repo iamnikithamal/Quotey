@@ -75,7 +75,15 @@ fun BackgroundSheet(
     onPatternChanged: (PatternSettings) -> Unit,
     onColorPickerRequest: (ColorPickerTarget) -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(background.type.ordinal) }
+    // Map BackgroundType to tab index safely - only 3 tabs available (SOLID, GRADIENT, PATTERN)
+    // IMAGE type falls back to SOLID (index 0) since there's no IMAGE tab in the UI
+    val initialTabIndex = when (background.type) {
+        BackgroundType.SOLID -> 0
+        BackgroundType.GRADIENT -> 1
+        BackgroundType.PATTERN -> 2
+        BackgroundType.IMAGE -> 0 // Fallback to SOLID tab since IMAGE is not implemented in UI
+    }
+    var selectedTab by remember { mutableIntStateOf(initialTabIndex) }
 
     BottomSheetContainer(onDismiss = onDismiss) {
         Column(

@@ -346,8 +346,10 @@ private fun OnboardingBackground(
     currentPage: Int,
     pageOffset: Float
 ) {
-    val currentColors = onboardingPages[currentPage]
-    val nextColors = onboardingPages.getOrNull(currentPage + 1) ?: currentColors
+    // Safe access with bounds checking to prevent ArrayIndexOutOfBoundsException
+    val safeCurrentPage = currentPage.coerceIn(0, onboardingPages.lastIndex.coerceAtLeast(0))
+    val currentColors = onboardingPages.getOrNull(safeCurrentPage) ?: onboardingPages.first()
+    val nextColors = onboardingPages.getOrNull(safeCurrentPage + 1) ?: currentColors
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
