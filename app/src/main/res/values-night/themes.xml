@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash Screen Theme - Dark -->
+    <style name="Theme.Quotey.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/primary_dark_theme</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenAnimationDuration">500</item>
+        <item name="postSplashScreenTheme">@style/Theme.Quotey</item>
+    </style>
+
+    <!-- Base App Theme - Dark -->
+    <style name="Theme.Quotey" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Primary -->
+        <item name="colorPrimary">@color/primary_dark_theme</item>
+        <item name="colorOnPrimary">@color/on_primary_dark_theme</item>
+        <item name="colorPrimaryContainer">@color/primary_container_dark_theme</item>
+        <item name="colorOnPrimaryContainer">@color/on_primary_container_dark_theme</item>
+
+        <!-- Secondary -->
+        <item name="colorSecondary">@color/secondary_dark_theme</item>
+        <item name="colorOnSecondary">@color/on_secondary_dark_theme</item>
+        <item name="colorSecondaryContainer">@color/secondary_container_dark_theme</item>
+        <item name="colorOnSecondaryContainer">@color/on_secondary_container_dark_theme</item>
+
+        <!-- Tertiary -->
+        <item name="colorTertiary">@color/tertiary_dark_theme</item>
+        <item name="colorOnTertiary">@color/on_tertiary_dark_theme</item>
+        <item name="colorTertiaryContainer">@color/tertiary_container_dark_theme</item>
+        <item name="colorOnTertiaryContainer">@color/on_tertiary_container_dark_theme</item>
+
+        <!-- Background and Surface -->
+        <item name="android:colorBackground">@color/background_dark_theme</item>
+        <item name="colorOnBackground">@color/on_background_dark_theme</item>
+        <item name="colorSurface">@color/surface_dark_theme</item>
+        <item name="colorOnSurface">@color/on_surface_dark_theme</item>
+        <item name="colorSurfaceVariant">@color/surface_variant_dark_theme</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant_dark_theme</item>
+
+        <!-- Error -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/on_error</item>
+        <item name="colorErrorContainer">@color/error_container</item>
+        <item name="colorOnErrorContainer">@color/on_error_container</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/outline_dark_theme</item>
+        <item name="colorOutlineVariant">@color/outline_variant_dark_theme</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>
