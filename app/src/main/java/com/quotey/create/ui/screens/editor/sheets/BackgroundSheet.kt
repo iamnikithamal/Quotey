@@ -277,7 +277,7 @@ private fun SolidColorContent(
 private fun GradientContent(
     gradient: GradientSettings,
     onGradientChanged: (GradientSettings) -> Unit,
-    onColorPickerRequest: (ColorPickerTarget) -> Unit
+    onColorPickerRequest: (ColorPickerTarget, Int) -> Unit
 ) {
     // Keep selectedColorIndex in bounds when colors list changes
     var selectedColorIndex by remember { mutableIntStateOf(0) }
@@ -810,7 +810,7 @@ private fun GradientColorEditor(
 private fun PatternContent(
     pattern: PatternSettings,
     onPatternChanged: (PatternSettings) -> Unit,
-    onColorPickerRequest: (ColorPickerTarget) -> Unit
+    onColorPickerRequest: (ColorPickerTarget, Int) -> Unit
 ) {
     Column {
         SectionTitle("Pattern Type")
