@@ -306,16 +306,19 @@ private fun FontWeightSelector(
     onWeightSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Use predefined FontWeight constants to prevent ArrayIndexOutOfBoundsException
+    // in Compose's font resolution on certain devices (e.g., itel A662LM).
+    // Mapping weight values to safe FontWeight constants avoids invalid internal index calculations.
     val weights = listOf(
-        100 to "Thin",
-        200 to "ExtraLight",
-        300 to "Light",
-        400 to "Regular",
-        500 to "Medium",
-        600 to "SemiBold",
-        700 to "Bold",
-        800 to "ExtraBold",
-        900 to "Black"
+        100 to ("Thin" to FontWeight.Thin),
+        200 to ("ExtraLight" to FontWeight.ExtraLight),
+        300 to ("Light" to FontWeight.Light),
+        400 to ("Regular" to FontWeight.Normal),
+        500 to ("Medium" to FontWeight.Medium),
+        600 to ("SemiBold" to FontWeight.SemiBold),
+        700 to ("Bold" to FontWeight.Bold),
+        800 to ("ExtraBold" to FontWeight.ExtraBold),
+        900 to ("Black" to FontWeight.Black)
     )
 
     Row(
@@ -323,7 +326,8 @@ private fun FontWeightSelector(
             .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        weights.forEach { (weight, name) ->
+        weights.forEach { (weight, nameFontPair) ->
+            val (name, safeFontWeight) = nameFontPair
             val isSelected = currentWeight == weight
             Surface(
                 modifier = Modifier
@@ -338,7 +342,7 @@ private fun FontWeightSelector(
                 Text(
                     text = name,
                     style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight(weight),
+                    fontWeight = safeFontWeight,
                     color = if (isSelected)
                         MaterialTheme.colorScheme.onPrimaryContainer
                     else
