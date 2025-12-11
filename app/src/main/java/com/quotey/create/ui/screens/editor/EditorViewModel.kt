@@ -603,7 +603,7 @@ class EditorViewModel @Inject constructor(
     fun setGradientColor(index: Int, color: Long) {
         updateGradient { gradient ->
             val newColors = gradient.colors.toMutableList()
-            if (index < newColors.size) {
+            if (index >= 0 && index < newColors.size) {
                 newColors[index] = color
             }
             gradient.copy(colors = newColors)

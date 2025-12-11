@@ -73,7 +73,7 @@ fun BackgroundSheet(
     onSolidColorChanged: (Long) -> Unit,
     onGradientChanged: (GradientSettings) -> Unit,
     onPatternChanged: (PatternSettings) -> Unit,
-    onColorPickerRequest: (ColorPickerTarget) -> Unit
+    onColorPickerRequest: (ColorPickerTarget, Int) -> Unit
 ) {
     var selectedTab by remember { mutableIntStateOf(background.type.ordinal) }
 
@@ -128,7 +128,7 @@ fun BackgroundSheet(
                 0 -> SolidColorContent(
                     selectedColor = background.solidColor,
                     onColorSelected = onSolidColorChanged,
-                    onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.BACKGROUND_SOLID) }
+                    onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.BACKGROUND_SOLID, 0) }
                 )
                 1 -> GradientContent(
                     gradient = background.gradient,
@@ -353,7 +353,7 @@ private fun GradientContent(
             onColorIndexSelected = { selectedColorIndex = it.coerceIn(0, gradient.colors.lastIndex.coerceAtLeast(0)) },
             onColorChanged = { index, color ->
                 val newColors = gradient.colors.toMutableList()
-                if (index < newColors.size) {
+                if (index >= 0 && index < newColors.size) {
                     newColors[index] = color
                 }
                 onGradientChanged(gradient.copy(colors = newColors))
@@ -375,9 +375,10 @@ private fun GradientContent(
                     onGradientChanged(gradient.copy(colors = newColors))
                 }
             },
-            onCustomColorRequest = {
-                // Store selected index and open color picker
-                onColorPickerRequest(ColorPickerTarget.GRADIENT_COLOR)
+            onCustomColorRequest = { index ->
+                // Store selected index and open color picker with the correct index
+                selectedColorIndex = index.coerceIn(0, gradient.colors.lastIndex.coerceAtLeast(0))
+                onColorPickerRequest(ColorPickerTarget.GRADIENT_COLOR, selectedColorIndex)
             },
             modifier = Modifier.padding(horizontal = 16.dp)
         )
@@ -657,7 +658,7 @@ private fun GradientColorEditor(
     onColorChanged: (Int, Long) -> Unit,
     onAddColor: () -> Unit,
     onRemoveColor: (Int) -> Unit,
-    onCustomColorRequest: () -> Unit,
+    onCustomColorRequest: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Ensure selectedIndex is always valid
@@ -778,7 +779,7 @@ private fun GradientColorEditor(
                             color = MaterialTheme.colorScheme.outlineVariant,
                             shape = CircleShape
                         )
-                        .clickable { onCustomColorRequest() },
+                        .clickable { onCustomColorRequest(safeIndex) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -885,7 +886,7 @@ private fun PatternContent(
                 selectedColor = pattern.backgroundColor,
                 colors = PresetColors.SolidColors.take(12).map { it.value.toLong() },
                 onColorSelected = { onPatternChanged(pattern.copy(backgroundColor = it)) },
-                onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.PATTERN_SECONDARY) },
+                onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.PATTERN_SECONDARY, 0) },
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
@@ -897,7 +898,7 @@ private fun PatternContent(
                 selectedColor = pattern.primaryColor,
                 colors = PresetColors.SolidColors.take(12).map { it.value.toLong() },
                 onColorSelected = { onPatternChanged(pattern.copy(primaryColor = it)) },
-                onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.PATTERN_PRIMARY) },
+                onCustomColorRequest = { onColorPickerRequest(ColorPickerTarget.PATTERN_PRIMARY, 0) },
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
 
