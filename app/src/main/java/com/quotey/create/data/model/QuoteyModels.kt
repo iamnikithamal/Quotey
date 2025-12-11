@@ -477,10 +477,10 @@ data class ProjectHistory(
     val maxSize: Int = 50
 ) {
     val canUndo: Boolean
-        get() = currentIndex > 0
+        get() = currentIndex > 0 && entries.isNotEmpty()
 
     val canRedo: Boolean
-        get() = currentIndex < entries.lastIndex
+        get() = entries.isNotEmpty() && currentIndex < entries.lastIndex
 }
 
 /**
